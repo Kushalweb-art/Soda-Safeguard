@@ -1,0 +1,271 @@
+
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ValidationResult } from '@/types';
+import { CheckCircle, XCircle, AlertTriangle, Calendar, BarChart3 } from 'lucide-react';
+import { format } from 'date-fns';
+import { motion } from 'framer-motion';
+
+interface ResultsTableProps {
+  results: ValidationResult[];
+}
+
+const ResultsTable: React.FC<ResultsTableProps> = ({ results }) => {
+  const [selectedResult, setSelectedResult] = useState<ValidationResult | null>(null);
+  
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), 'MMM d, yyyy h:mm a');
+  };
+  
+  const formatDuration = (ms: number | undefined) => {
+    if (!ms) return '-';
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(2)}s`;
+  };
+  
+  const handleViewDetails = (result: ValidationResult) => {
+    setSelectedResult(result);
+  };
+  
+  const renderStatusIcon = (status: 'passed' | 'failed' | 'error') => {
+    switch (status) {
+      case 'passed':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'failed':
+        return <XCircle className="h-5 w-5 text-red-500" />;
+      case 'error':
+        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+    }
+  };
+  
+  return (
+    <>
+      <Card className="glass-panel">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Validation Results
+          </CardTitle>
+          <CardDescription>
+            Results from your data validation checks
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {results.length > 0 ? (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Check Name</TableHead>
+                    <TableHead>Dataset</TableHead>
+                    <TableHead className="hidden md:table-cell">Column</TableHead>
+                    <TableHead className="hidden md:table-cell">Metrics</TableHead>
+                    <TableHead className="hidden md:table-cell">Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {results.map((result) => (
+                    <TableRow key={result.id}>
+                      <TableCell>
+                        <div className="flex items-center">
+                          {renderStatusIcon(result.status)}
+                          <span className="ml-2 hidden md:inline">
+                            {result.status.charAt(0).toUpperCase() + result.status.slice(1)}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{result.checkName}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span>{result.dataset.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {result.dataset.type === 'postgres' ? 'PostgreSQL' : 'CSV'}
+                            {result.table && ` • ${result.table}`}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {result.column || '-'}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="flex flex-col">
+                          <span>
+                            {result.metrics.passedCount !== undefined && result.metrics.failedCount !== undefined ? (
+                              <>
+                                <span className="text-green-600">{result.metrics.passedCount}</span>
+                                <span className="text-muted-foreground mx-1">/</span>
+                                <span className="text-red-600">{result.metrics.failedCount}</span>
+                              </>
+                            ) : (
+                              '-'
+                            )}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDuration(result.metrics.executionTimeMs)}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="flex items-center text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {formatDate(result.createdAt)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(result)}
+                        >
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <BarChart3 className="mx-auto h-12 w-12 text-muted" />
+              <h3 className="mt-2 text-lg font-medium">No results yet</h3>
+              <p className="mt-1 text-muted-foreground">
+                Run validation checks to see results here
+              </p>
+              <Button className="mt-4" asChild>
+                <a href="/validation">Create Validation Check</a>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      <Dialog open={!!selectedResult} onOpenChange={(open) => !open && setSelectedResult(null)}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>Validation Result Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about this validation check
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedResult && (
+            <div className="space-y-6 pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium">{selectedResult.checkName}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedResult.dataset.name} • {selectedResult.dataset.type === 'postgres' ? 'PostgreSQL' : 'CSV'}
+                    {selectedResult.table && ` • ${selectedResult.table}`}
+                    {selectedResult.column && ` • Column: ${selectedResult.column}`}
+                  </p>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={`
+                    flex items-center gap-1 px-3 py-1
+                    ${selectedResult.status === 'passed' ? 'bg-green-100 text-green-800 hover:bg-green-100' : 
+                      selectedResult.status === 'failed' ? 'bg-red-100 text-red-800 hover:bg-red-100' :
+                      'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'}
+                  `}
+                >
+                  {renderStatusIcon(selectedResult.status)}
+                  <span>{selectedResult.status.charAt(0).toUpperCase() + selectedResult.status.slice(1)}</span>
+                </Badge>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-muted/20 border">
+                  <CardContent className="p-4">
+                    <h4 className="text-sm font-medium mb-1">Total Rows</h4>
+                    <p className="text-2xl font-semibold">{selectedResult.metrics.rowCount?.toLocaleString() || '-'}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-muted/20 border">
+                  <CardContent className="p-4">
+                    <h4 className="text-sm font-medium mb-1">Pass / Fail</h4>
+                    <p className="text-2xl font-semibold">
+                      <span className="text-green-600">{selectedResult.metrics.passedCount?.toLocaleString() || '-'}</span>
+                      <span className="text-muted-foreground mx-1">/</span>
+                      <span className="text-red-600">{selectedResult.metrics.failedCount?.toLocaleString() || '-'}</span>
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-muted/20 border">
+                  <CardContent className="p-4">
+                    <h4 className="text-sm font-medium mb-1">Execution Time</h4>
+                    <p className="text-2xl font-semibold">{formatDuration(selectedResult.metrics.executionTimeMs)}</p>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {selectedResult.status === 'failed' && selectedResult.failedRows && selectedResult.failedRows.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Failed Rows</h4>
+                  
+                  <div className="rounded-md border max-h-[300px] overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {Object.keys(selectedResult.failedRows[0]).map((key) => (
+                            <TableHead key={key}>{key}</TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedResult.failedRows.map((row, index) => (
+                          <TableRow key={index}>
+                            {Object.values(row).map((value, i) => (
+                              <TableCell key={i}>{value}</TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+              
+              {selectedResult.status === 'error' && selectedResult.errorMessage && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Error Details</h4>
+                  <div className="rounded-md bg-red-50 p-4 text-red-800">
+                    {selectedResult.errorMessage}
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex items-center text-xs text-muted-foreground justify-end">
+                <Calendar className="h-3 w-3 mr-1" />
+                Run on {formatDate(selectedResult.createdAt)}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+export default ResultsTable;
