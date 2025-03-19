@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -53,6 +52,40 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ results }) => {
       case 'error':
         return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
     }
+  };
+  
+  const renderFailedRowsTable = () => {
+    if (!selectedResult || !selectedResult.failedRows || selectedResult.failedRows.length === 0) return null;
+    
+    const firstRow = selectedResult.failedRows[0];
+    const keys = Object.keys(firstRow);
+    
+    return (
+      <div>
+        <h4 className="text-sm font-medium mb-3">Failed Rows</h4>
+        
+        <div className="rounded-md border max-h-[300px] overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {keys.map((key) => (
+                  <TableHead key={key}>{key}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {selectedResult.failedRows.map((row, index) => (
+                <TableRow key={index}>
+                  {keys.map((key, i) => (
+                    <TableCell key={i}>{String(row[key as keyof typeof row])}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
   };
   
   return (
@@ -220,32 +253,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ results }) => {
                 </Card>
               </div>
               
-              {selectedResult.status === 'failed' && selectedResult.failedRows && selectedResult.failedRows.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Failed Rows</h4>
-                  
-                  <div className="rounded-md border max-h-[300px] overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {Object.keys(selectedResult.failedRows[0]).map((key) => (
-                            <TableHead key={key}>{key}</TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedResult.failedRows.map((row, index) => (
-                          <TableRow key={index}>
-                            {Object.values(row).map((value, i) => (
-                              <TableCell key={i}>{value}</TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
+              {selectedResult.status === 'failed' && renderFailedRowsTable()}
               
               {selectedResult.status === 'error' && selectedResult.errorMessage && (
                 <div>

@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, PlusCircle, X, Check, AlertTriangle, ArrowRight } from 'lucide-react';
+import { CheckCircle, PlusCircle, X, Check, AlertTriangle, ArrowRight, Database, FileSpreadsheet } from 'lucide-react';
 import { CsvDataset, PostgresConnection, ValidationCheck, ValidationCheckType, ValidationResult } from '@/types';
 import { createValidationCheck, runValidation } from '@/utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -68,7 +67,6 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
     },
   });
 
-  // Get the selected dataset
   const getSelectedDataset = () => {
     if (!selectedDatasetId || !selectedDatasetType) return null;
     
@@ -79,7 +77,6 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
     }
   };
   
-  // Get available columns for the selected dataset/table
   const getAvailableColumns = () => {
     const dataset = getSelectedDataset();
     if (!dataset) return [];
@@ -94,7 +91,6 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
     }
   };
   
-  // Handle dataset selection
   const handleDatasetChange = (datasetId: string, type: 'postgres' | 'csv') => {
     setSelectedDatasetId(datasetId);
     setSelectedDatasetType(type);
@@ -106,12 +102,12 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
     form.setValue('column', undefined);
   };
   
-  // Handle check type selection
   const handleCheckTypeChange = (type: ValidationCheckType) => {
-    setSelectedCheckType(type);
-    form.setValue('type', type);
+    if (type !== 'freshness') {
+      setSelectedCheckType(type);
+      form.setValue('type', type as any);
+    }
     
-    // Reset parameters based on check type
     let defaultParams = {};
     switch (type) {
       case 'missing_values':
@@ -140,7 +136,6 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
     form.setValue('parameters', defaultParams);
   };
   
-  // Render parameters form based on check type
   const renderParametersForm = () => {
     const type = selectedCheckType;
     if (!type) return null;
@@ -303,7 +298,6 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
     setIsCreating(true);
     
     try {
-      // Get dataset name
       let datasetName = '';
       if (values.datasetType === 'postgres') {
         const connection = postgresConnections.find(c => c.id === values.datasetId);
@@ -334,7 +328,6 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
           description: 'The check has been created successfully',
         });
         
-        // Run the validation
         setIsCreating(false);
         setIsRunning(true);
         

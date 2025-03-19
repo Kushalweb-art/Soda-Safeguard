@@ -52,7 +52,17 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
     setIsTesting(true);
     
     try {
-      const response = await testPostgresConnection(values);
+      // Fixed error: Ensure all required properties are present in the object
+      const connectionData: Omit<PostgresConnection, "id" | "createdAt"> = {
+        name: values.name,
+        host: values.host,
+        port: values.port,
+        database: values.database,
+        username: values.username,
+        password: values.password,
+      };
+      
+      const response = await testPostgresConnection(connectionData);
       if (response.success) {
         toast({
           title: 'Connection successful',
@@ -74,7 +84,17 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
     setIsCreating(true);
     
     try {
-      const response = await createPostgresConnection(values);
+      // Fixed error: Ensure all required properties are present in the object
+      const connectionData: Omit<PostgresConnection, "id" | "createdAt"> = {
+        name: values.name,
+        host: values.host,
+        port: values.port,
+        database: values.database,
+        username: values.username,
+        password: values.password,
+      };
+      
+      const response = await createPostgresConnection(connectionData);
       if (response.success && response.data) {
         toast({
           title: 'Connection created',
