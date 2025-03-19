@@ -9,6 +9,7 @@ import { ArrowRight, ArrowUpRight, BarChart3, Database, FileSpreadsheet, CheckCi
 import { fetchValidationResults } from '@/utils/api';
 import { ValidationResult } from '@/types';
 import PageTransition from '@/components/ui/PageTransition';
+import { format, subDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const Dashboard = () => {
   
   useEffect(() => {
     const loadData = async () => {
+      setLoading(true);
       const response = await fetchValidationResults();
       if (response.success && response.data) {
         setResults(response.data);
@@ -38,15 +40,24 @@ const Dashboard = () => {
     { name: 'Failed', value: failedChecks, color: '#ef4444' },
   ];
   
+  // Generate time trend data based on actual results
   const timeTrendData = Array.from({ length: 7 }).map((_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const date = subDays(new Date(), i);
+    const dateStr = format(date, 'MMM d');
+    
+    // Filter results for this day
+    const dayStart = startOfDay(date);
+    const dayEnd = endOfDay(date);
+    
+    const dayResults = results.filter(result => {
+      const resultDate = new Date(result.createdAt);
+      return isWithinInterval(resultDate, { start: dayStart, end: dayEnd });
+    });
     
     return {
       date: dateStr,
-      passed: Math.floor(Math.random() * 10) + 5,
-      failed: Math.floor(Math.random() * 5),
+      passed: dayResults.filter(r => r.status === 'passed').length,
+      failed: dayResults.filter(r => r.status === 'failed').length,
     };
   }).reverse();
   

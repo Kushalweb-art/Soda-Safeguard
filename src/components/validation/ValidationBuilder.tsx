@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -109,11 +110,21 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
     form.setValue('datasetType', type);
     form.setValue('table', undefined);
     form.setValue('column', undefined);
+    
+    // Log the selected dataset for debugging
+    console.log("Selected dataset:", type, datasetId);
+    
+    // Get selected dataset details
+    const dataset = type === 'postgres' 
+      ? postgresConnections.find(conn => conn.id === datasetId)
+      : csvDatasets.find(ds => ds.id === datasetId);
+      
+    console.log("Dataset details:", dataset);
   };
   
   const handleCheckTypeChange = (type: ValidationCheckType) => {
     setSelectedCheckType(type);
-    form.setValue('type', type as any);
+    form.setValue('type', type as any);  // Type assertion to handle the type issue
     
     let defaultParams = {};
     switch (type) {
@@ -305,10 +316,13 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
     setIsCreating(true);
     
     try {
+      console.log("Submitting validation check:", values);
+      
       let datasetName = '';
       if (values.datasetType === 'postgres') {
         const connection = postgresConnections.find(c => c.id === values.datasetId);
         datasetName = connection?.name || 'Unknown database';
+        console.log("PostgreSQL connection selected:", connection);
       } else {
         const dataset = csvDatasets.find(d => d.id === values.datasetId);
         datasetName = dataset?.name || 'Unknown CSV';
@@ -327,6 +341,7 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
         parameters: values.parameters,
       };
       
+      console.log("Creating validation check:", check);
       const response = await createValidationCheck(check);
       
       if (response.success && response.data) {
@@ -338,7 +353,10 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
         setIsCreating(false);
         setIsRunning(true);
         
+        console.log("Running validation for check ID:", response.data.id);
         const validationResponse = await runValidation(response.data.id);
+        console.log("Validation result:", validationResponse);
+        
         if (validationResponse.success && validationResponse.data) {
           toast({
             title: 'Validation completed',
@@ -350,6 +368,7 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
         }
       }
     } catch (error) {
+      console.error("Error in validation:", error);
       toast({
         title: 'Error creating validation check',
         description: 'There was a problem creating the validation check',

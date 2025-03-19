@@ -1,3 +1,4 @@
+
 // Dataset Types
 export interface PostgresConnection {
   id: string;
@@ -83,7 +84,7 @@ export interface ValidationResult {
   createdAt: string;
 }
 
-// Add these new types for database schema fetching
+// Schema fetching types
 export interface SchemaFetchParams {
   host: string;
   port: number;

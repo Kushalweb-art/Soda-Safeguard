@@ -1,3 +1,4 @@
+
 import { toast } from '@/hooks/use-toast';
 import { 
   ApiResponse, 
@@ -7,6 +8,7 @@ import {
   PostgresTable,
   SchemaFetchParams,
   ValidationCheck, 
+  ValidationCheckType,
   ValidationResult 
 } from '@/types';
 import { 
@@ -293,15 +295,81 @@ export const runValidation = async (checkId: string): Promise<ApiResponse<Valida
       throw new Error('Dataset not found');
     }
     
-    // Simulate running validation
-    // In a real app, this would use a validation library or backend service
+    // Run the appropriate validation based on check type
+    let passed = false;
+    let failedCount = 0;
+    let errorMessage = '';
+    
+    // Simulate running validation with more realistic behavior
     const totalRows = check.dataset.type === 'csv' 
       ? (dataset as CsvDataset).rowCount 
       : Math.floor(Math.random() * 10000) + 100;
     
-    // Generate a random result with about 70% pass rate
-    const passed = Math.random() > 0.3;
-    const failedCount = passed ? 0 : Math.floor(Math.random() * 20) + 1;
+    switch (check.type) {
+      case 'missing_values':
+        // For missing values check, we'll simulate finding some nulls in PostgreSQL
+        if (check.dataset.type === 'postgres') {
+          const missingPercentage = Math.random() * 5; // Random 0-5% missing
+          failedCount = Math.floor((totalRows * missingPercentage) / 100);
+          passed = failedCount <= (check.parameters.threshold || 0) * totalRows / 100;
+        } else {
+          // For CSV, use a similar approach
+          const csvDataset = dataset as CsvDataset;
+          const columnIndex = csvDataset.columns.indexOf(check.column || '');
+          if (columnIndex >= 0) {
+            // Count empty values in preview data
+            const emptyCount = csvDataset.previewData.filter(
+              row => !row[check.column || '']
+            ).length;
+            failedCount = Math.floor((totalRows * emptyCount) / csvDataset.previewData.length);
+            passed = failedCount <= (check.parameters.threshold || 0) * totalRows / 100;
+          }
+        }
+        break;
+        
+      case 'unique_values':
+        // For uniqueness, simulate some duplicates
+        if (check.dataset.type === 'postgres') {
+          // Simulate finding a small number of duplicates
+          failedCount = Math.floor(Math.random() * 10);
+          passed = failedCount === 0;
+        } else {
+          // For CSV data, check preview data for duplicates
+          const csvDataset = dataset as CsvDataset;
+          const values = csvDataset.previewData.map(row => row[check.column || '']);
+          const uniqueValues = new Set(values);
+          failedCount = values.length - uniqueValues.size;
+          // Scale to full dataset
+          failedCount = Math.floor((totalRows * failedCount) / csvDataset.previewData.length);
+          passed = failedCount === 0;
+        }
+        break;
+        
+      case 'valid_values':
+        // For valid values, check against the allowed list
+        const allowedValues = check.parameters.values || [];
+        if (check.dataset.type === 'postgres') {
+          // Simulate finding values outside the allowed list
+          failedCount = Math.floor(Math.random() * totalRows * 0.02); // Up to 2% invalid
+          passed = failedCount === 0;
+        } else {
+          // For CSV, check preview data against allowed values
+          const csvDataset = dataset as CsvDataset;
+          const invalidCount = csvDataset.previewData.filter(
+            row => !allowedValues.includes(row[check.column || ''])
+          ).length;
+          failedCount = Math.floor((totalRows * invalidCount) / csvDataset.previewData.length);
+          passed = failedCount === 0;
+        }
+        break;
+        
+      // ... Add more specific validations for other check types
+        
+      default:
+        // For other validations, use a more realistic pass rate based on check type
+        passed = Math.random() > 0.2; // 80% pass rate for other checks
+        failedCount = passed ? 0 : Math.floor(Math.random() * totalRows * 0.05); // Up to 5% failures
+    }
     
     const result: ValidationResult = {
       id: `result_${Date.now()}`,
@@ -318,6 +386,7 @@ export const runValidation = async (checkId: string): Promise<ApiResponse<Valida
         failedCount,
       },
       createdAt: new Date().toISOString(),
+      errorMessage,
     };
     
     // Add failed rows for CSV datasets if validation failed

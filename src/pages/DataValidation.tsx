@@ -32,6 +32,7 @@ const DataValidation = () => {
     setLoading(true);
     
     try {
+      console.log("Loading datasets and connections...");
       // Load both PostgreSQL connections and CSV datasets in parallel
       const [connectionsResponse, datasetsResponse] = await Promise.all([
         fetchPostgresConnections(),
@@ -64,6 +65,7 @@ const DataValidation = () => {
   };
   
   const handleValidationComplete = (result: ValidationResult) => {
+    console.log("Validation completed:", result);
     setValidationResult(result);
     
     // After validation is complete, navigate to results page
