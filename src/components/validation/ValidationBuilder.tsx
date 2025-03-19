@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, PlusCircle, X, Check, AlertTriangle, ArrowRight, Database, FileSpreadsheet } from 'lucide-react';
+import { CheckCircle, PlusCircle, X, Check, AlertTriangle, ArrowRight, Database as DatabaseIcon, FileSpreadsheet as FileSpreadsheetIcon } from 'lucide-react';
 import { CsvDataset, PostgresConnection, ValidationCheck, ValidationCheckType, ValidationResult } from '@/types';
 import { createValidationCheck, runValidation } from '@/utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -103,10 +103,8 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
   };
   
   const handleCheckTypeChange = (type: ValidationCheckType) => {
-    if (type !== 'freshness') {
-      setSelectedCheckType(type);
-      form.setValue('type', type as any);
-    }
+    setSelectedCheckType(type);
+    form.setValue('type', type);
     
     let defaultParams = {};
     switch (type) {
@@ -425,7 +423,7 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
                     </div>
                   ) : (
                     <div className="text-center py-6">
-                      <Database className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <DatabaseIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                       <h3 className="text-sm font-medium mb-1">No PostgreSQL connections</h3>
                       <p className="text-xs text-muted-foreground mb-3">
                         Add a connection to get started
@@ -466,7 +464,7 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
                     </div>
                   ) : (
                     <div className="text-center py-6">
-                      <FileSpreadsheet className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <FileSpreadsheetIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                       <h3 className="text-sm font-medium mb-1">No CSV datasets</h3>
                       <p className="text-xs text-muted-foreground mb-3">
                         Upload a CSV file to get started

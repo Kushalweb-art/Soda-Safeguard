@@ -52,14 +52,15 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
     setIsTesting(true);
     
     try {
-      // Fixed error: Ensure all required properties are present in the object
-      const connectionData: Omit<PostgresConnection, "id" | "createdAt"> = {
+      // Ensure we're providing all required properties and they are non-optional
+      const connectionData = {
         name: values.name,
         host: values.host,
         port: values.port,
         database: values.database,
         username: values.username,
         password: values.password,
+        tables: [] // Add tables array even though it might be empty initially
       };
       
       const response = await testPostgresConnection(connectionData);
@@ -84,14 +85,15 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
     setIsCreating(true);
     
     try {
-      // Fixed error: Ensure all required properties are present in the object
-      const connectionData: Omit<PostgresConnection, "id" | "createdAt"> = {
+      // Ensure we're providing all required properties and they are non-optional
+      const connectionData = {
         name: values.name,
         host: values.host,
         port: values.port,
         database: values.database,
         username: values.username,
         password: values.password,
+        tables: [] // Add tables array even though it might be empty initially
       };
       
       const response = await createPostgresConnection(connectionData);
