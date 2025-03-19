@@ -40,8 +40,19 @@ const DataValidation = () => {
       ]);
       
       if (connectionsResponse.success && connectionsResponse.data) {
+        console.log("PostgreSQL connections loaded:", connectionsResponse.data);
+        
+        // Check if each connection has tables
+        connectionsResponse.data.forEach(conn => {
+          console.log(`Connection ${conn.name} has ${conn.tables?.length || 0} tables`);
+          if (conn.tables) {
+            conn.tables.forEach(table => {
+              console.log(`Table ${table.name} has ${table.columns.length} columns`);
+            });
+          }
+        });
+        
         setPostgresConnections(connectionsResponse.data);
-        console.log("Loaded PostgreSQL connections:", connectionsResponse.data);
       } else {
         console.error("Failed to load PostgreSQL connections:", connectionsResponse.error);
       }

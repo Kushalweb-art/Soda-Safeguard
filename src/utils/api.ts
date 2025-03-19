@@ -1,4 +1,3 @@
-
 import { toast } from '@/hooks/use-toast';
 import { 
   ApiResponse, 
@@ -44,6 +43,7 @@ export const fetchPostgresConnections = async (): Promise<ApiResponse<PostgresCo
   try {
     await simulateLatency();
     const connections = getPostgresConnections();
+    console.log("Fetched PostgreSQL connections:", connections);
     return {
       success: true,
       data: connections,
@@ -74,6 +74,8 @@ export const createPostgresConnection = async (connection: Omit<PostgresConnecti
       createdAt: new Date().toISOString(),
       tables: schemaResponse.success ? schemaResponse.tables : [],
     };
+    
+    console.log("Storing new PostgreSQL connection with tables:", newConnection.tables);
     
     // Store the new connection in localStorage
     storePostgresConnection(newConnection);
@@ -128,6 +130,7 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
       },
     ];
     
+    console.log("Generated mock tables for database:", params.database, mockTables);
     return {
       success: true,
       tables: mockTables,

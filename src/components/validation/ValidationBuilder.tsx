@@ -77,11 +77,23 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
     },
   });
 
+  useEffect(() => {
+    // Log connections for debugging
+    console.log("ValidationBuilder received PostgreSQL connections:", postgresConnections);
+    if (postgresConnections.length > 0) {
+      postgresConnections.forEach((conn, index) => {
+        console.log(`Connection ${index + 1} (${conn.name}) tables:`, conn.tables);
+      });
+    }
+  }, [postgresConnections]);
+
   const getSelectedDataset = () => {
     if (!selectedDatasetId || !selectedDatasetType) return null;
     
     if (selectedDatasetType === 'postgres') {
-      return postgresConnections.find(conn => conn.id === selectedDatasetId);
+      const pgConn = postgresConnections.find(conn => conn.id === selectedDatasetId);
+      console.log("Selected PostgreSQL connection:", pgConn);
+      return pgConn;
     } else {
       return csvDatasets.find(dataset => dataset.id === selectedDatasetId);
     }
@@ -93,7 +105,9 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
     
     if (selectedDatasetType === 'postgres') {
       const pgDataset = dataset as PostgresConnection;
+      console.log("Looking for table:", selectedTable, "in tables:", pgDataset.tables);
       const table = pgDataset.tables?.find(t => t.name === selectedTable);
+      console.log("Found table:", table);
       return table?.columns || [];
     } else {
       const csvDataset = dataset as CsvDataset;
@@ -120,6 +134,9 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
       : csvDatasets.find(ds => ds.id === datasetId);
       
     console.log("Dataset details:", dataset);
+    if (type === 'postgres') {
+      console.log("Tables in selected PostgreSQL connection:", (dataset as PostgresConnection)?.tables);
+    }
   };
   
   const handleCheckTypeChange = (type: ValidationCheckType) => {
@@ -441,6 +458,11 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
                             <div>
                               <h4 className="font-medium text-sm">{connection.name}</h4>
                               <p className="text-xs text-muted-foreground">{connection.host}:{connection.port}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {connection.tables && connection.tables.length 
+                                  ? `${connection.tables.length} tables available` 
+                                  : 'No tables available'}
+                              </p>
                             </div>
                             {selectedDatasetId === connection.id && selectedDatasetType === 'postgres' && (
                               <Check className="h-4 w-4 text-primary" />
@@ -520,72 +542,103 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
                     <FormField
                       control={form.control}
                       name="table"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Table</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              setSelectedTable(value);
-                            }}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select table" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {getSelectedDataset() && (
-                                (getSelectedDataset() as PostgresConnection).tables?.map(table => (
-                                  <SelectItem key={table.name} value={table.name}>
-                                    {table.name}
+                      render={({ field }) => {
+                        const selectedConn = postgresConnections.find(conn => conn.id === selectedDatasetId);
+                        console.log("Table selection - connection:", selectedConn?.name);
+                        console.log("Table selection - available tables:", selectedConn?.tables);
+                        
+                        return (
+                          <FormItem>
+                            <FormLabel>Table</FormLabel>
+                            <Select
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                setSelectedTable(value);
+                                console.log("Selected table:", value);
+                              }}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select table" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {selectedConn && selectedConn.tables && selectedConn.tables.length > 0 ? (
+                                  selectedConn.tables.map(table => (
+                                    <SelectItem key={table.name} value={table.name}>
+                                      {table.name}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <SelectItem value="no_tables" disabled>
+                                    No tables available
                                   </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Select the table to validate
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              {selectedConn && selectedConn.tables && selectedConn.tables.length > 0
+                                ? 'Select the table to validate'
+                                : 'No tables available in this connection'}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
                   )}
                   
                   <FormField
                     control={form.control}
                     name="column"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Column</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={selectedDatasetType === 'postgres' && !selectedTable}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select column" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {getAvailableColumns().map(column => (
-                              <SelectItem key={column.name} value={column.name}>
-                                {column.name} ({column.dataType})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          {selectedDatasetType === 'postgres' && !selectedTable 
-                            ? 'Please select a table first'
-                            : 'Select the column to validate'}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const availableColumns = getAvailableColumns();
+                      console.log("Column selection - available columns:", availableColumns);
+                      
+                      return (
+                        <FormItem>
+                          <FormLabel>Column</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              console.log("Selected column:", value);
+                            }}
+                            value={field.value}
+                            disabled={selectedDatasetType === 'postgres' && !selectedTable}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select column" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {availableColumns.length > 0 ? (
+                                availableColumns.map(column => (
+                                  <SelectItem key={column.name} value={column.name}>
+                                    {column.name} ({column.dataType})
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="no_columns" disabled>
+                                  {selectedDatasetType === 'postgres' && !selectedTable 
+                                    ? 'Select a table first'
+                                    : 'No columns available'}
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            {selectedDatasetType === 'postgres' && !selectedTable 
+                              ? 'Please select a table first'
+                              : availableColumns.length > 0
+                                ? 'Select the column to validate'
+                                : 'No columns available'}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                   
                   <Separator className="my-4" />
