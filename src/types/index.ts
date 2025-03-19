@@ -42,7 +42,6 @@ export type ValidationCheckType =
   | 'valid_values' 
   | 'value_range' 
   | 'regex_match' 
-  | 'freshness' 
   | 'schema' 
   | 'custom_sql';
 

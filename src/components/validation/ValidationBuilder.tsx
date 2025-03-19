@@ -10,7 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, PlusCircle, X, Check, AlertTriangle, ArrowRight, Database as DatabaseIcon, FileSpreadsheet as FileSpreadsheetIcon } from 'lucide-react';
+import { 
+  CheckCircle, 
+  PlusCircle, 
+  X, 
+  Check, 
+  AlertTriangle, 
+  ArrowRight, 
+  Database as DatabaseIcon, 
+  FileSpreadsheet as FileSpreadsheetIcon 
+} from 'lucide-react';
 import { CsvDataset, PostgresConnection, ValidationCheck, ValidationCheckType, ValidationResult } from '@/types';
 import { createValidationCheck, runValidation } from '@/utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -104,7 +113,7 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
   
   const handleCheckTypeChange = (type: ValidationCheckType) => {
     setSelectedCheckType(type);
-    form.setValue('type', type);
+    form.setValue('type', type as any);
     
     let defaultParams = {};
     switch (type) {

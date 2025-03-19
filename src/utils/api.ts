@@ -33,9 +33,10 @@ const handleError = (error: any): ApiResponse<never> => {
 export const fetchPostgresConnections = async (): Promise<ApiResponse<PostgresConnection[]>> => {
   try {
     await simulateLatency();
+    const connections = getPostgresConnections();
     return {
       success: true,
-      data: getPostgresConnections(),
+      data: connections,
     };
   } catch (error) {
     return handleError(error);
@@ -82,9 +83,10 @@ export const testPostgresConnection = async (connection: Omit<PostgresConnection
 export const fetchCsvDatasets = async (): Promise<ApiResponse<CsvDataset[]>> => {
   try {
     await simulateLatency();
+    const datasets = getCsvDatasets();
     return {
       success: true,
-      data: getCsvDatasets(),
+      data: datasets,
     };
   } catch (error) {
     return handleError(error);
@@ -150,9 +152,10 @@ export const uploadCsvFile = async (file: File): Promise<ApiResponse<CsvDataset>
 export const fetchValidationChecks = async (): Promise<ApiResponse<ValidationCheck[]>> => {
   try {
     await simulateLatency();
+    const checks = getValidationChecks();
     return {
       success: true,
-      data: getValidationChecks(),
+      data: checks,
     };
   } catch (error) {
     return handleError(error);
@@ -257,9 +260,10 @@ export const runValidation = async (checkId: string): Promise<ApiResponse<Valida
 export const fetchValidationResults = async (): Promise<ApiResponse<ValidationResult[]>> => {
   try {
     await simulateLatency();
+    const results = getValidationResults();
     return {
       success: true,
-      data: getValidationResults(),
+      data: results,
     };
   } catch (error) {
     return handleError(error);

@@ -11,7 +11,7 @@ const STORAGE_KEYS = {
 export function getStoredData<T>(key: string): T[] {
   try {
     const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
+    return data ? JSON.parse(data) as T[] : [];
   } catch (error) {
     console.error(`Error retrieving data from localStorage (${key}):`, error);
     return [];
@@ -36,17 +36,37 @@ export function storeItem<T extends { id: string }>(key: string, item: T): T[] {
 }
 
 // Postgres connections
-export const getPostgresConnections = () => getStoredData(STORAGE_KEYS.POSTGRES_CONNECTIONS);
-export const storePostgresConnection = (connection) => storeItem(STORAGE_KEYS.POSTGRES_CONNECTIONS, connection);
+export const getPostgresConnections = () => 
+  getStoredData<PostgresConnection>(STORAGE_KEYS.POSTGRES_CONNECTIONS);
+  
+export const storePostgresConnection = (connection: PostgresConnection) => 
+  storeItem<PostgresConnection>(STORAGE_KEYS.POSTGRES_CONNECTIONS, connection);
 
 // CSV datasets
-export const getCsvDatasets = () => getStoredData(STORAGE_KEYS.CSV_DATASETS);
-export const storeCsvDataset = (dataset) => storeItem(STORAGE_KEYS.CSV_DATASETS, dataset);
+export const getCsvDatasets = () => 
+  getStoredData<CsvDataset>(STORAGE_KEYS.CSV_DATASETS);
+  
+export const storeCsvDataset = (dataset: CsvDataset) => 
+  storeItem<CsvDataset>(STORAGE_KEYS.CSV_DATASETS, dataset);
 
 // Validation checks
-export const getValidationChecks = () => getStoredData(STORAGE_KEYS.VALIDATION_CHECKS);
-export const storeValidationCheck = (check) => storeItem(STORAGE_KEYS.VALIDATION_CHECKS, check);
+export const getValidationChecks = () => 
+  getStoredData<ValidationCheck>(STORAGE_KEYS.VALIDATION_CHECKS);
+  
+export const storeValidationCheck = (check: ValidationCheck) => 
+  storeItem<ValidationCheck>(STORAGE_KEYS.VALIDATION_CHECKS, check);
 
 // Validation results
-export const getValidationResults = () => getStoredData(STORAGE_KEYS.VALIDATION_RESULTS);
-export const storeValidationResult = (result) => storeItem(STORAGE_KEYS.VALIDATION_RESULTS, result);
+export const getValidationResults = () => 
+  getStoredData<ValidationResult>(STORAGE_KEYS.VALIDATION_RESULTS);
+  
+export const storeValidationResult = (result: ValidationResult) => 
+  storeItem<ValidationResult>(STORAGE_KEYS.VALIDATION_RESULTS, result);
+
+// Need to import types for TypeScript checking
+import { 
+  PostgresConnection, 
+  CsvDataset, 
+  ValidationCheck, 
+  ValidationResult 
+} from '@/types';
