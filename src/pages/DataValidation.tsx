@@ -32,6 +32,7 @@ const DataValidation = () => {
     setLoading(true);
     
     try {
+      // Load both PostgreSQL connections and CSV datasets in parallel
       const [connectionsResponse, datasetsResponse] = await Promise.all([
         fetchPostgresConnections(),
         fetchCsvDatasets(),
@@ -39,12 +40,19 @@ const DataValidation = () => {
       
       if (connectionsResponse.success && connectionsResponse.data) {
         setPostgresConnections(connectionsResponse.data);
+        console.log("Loaded PostgreSQL connections:", connectionsResponse.data);
+      } else {
+        console.error("Failed to load PostgreSQL connections:", connectionsResponse.error);
       }
       
       if (datasetsResponse.success && datasetsResponse.data) {
         setCsvDatasets(datasetsResponse.data);
+        console.log("Loaded CSV datasets:", datasetsResponse.data);
+      } else {
+        console.error("Failed to load CSV datasets:", datasetsResponse.error);
       }
     } catch (error) {
+      console.error("Error loading data:", error);
       toast({
         title: 'Error loading data',
         description: 'Failed to load datasets and connections',

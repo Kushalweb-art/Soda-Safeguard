@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -517,13 +517,13 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {getSelectedDataset() && (selectedDataset => (
-                                (selectedDataset as PostgresConnection).tables?.map(table => (
+                              {getSelectedDataset() && (
+                                (getSelectedDataset() as PostgresConnection).tables?.map(table => (
                                   <SelectItem key={table.name} value={table.name}>
                                     {table.name}
                                   </SelectItem>
                                 ))
-                              ))(getSelectedDataset())}
+                              )}
                             </SelectContent>
                           </Select>
                           <FormDescription>
@@ -544,6 +544,7 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
+                          disabled={selectedDatasetType === 'postgres' && !selectedTable}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -559,7 +560,9 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
                           </SelectContent>
                         </Select>
                         <FormDescription>
-                          Select the column to validate
+                          {selectedDatasetType === 'postgres' && !selectedTable 
+                            ? 'Please select a table first'
+                            : 'Select the column to validate'}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

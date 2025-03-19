@@ -52,7 +52,7 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
     setIsTesting(true);
     
     try {
-      // Ensure we're providing all required properties and they are non-optional
+      // Create a complete connection object with all required properties
       const connectionData = {
         name: values.name,
         host: values.host,
@@ -60,14 +60,20 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
         database: values.database,
         username: values.username,
         password: values.password,
-        tables: [] // Add tables array even though it might be empty initially
+        tables: []
       };
       
       const response = await testPostgresConnection(connectionData);
       if (response.success) {
         toast({
           title: 'Connection successful',
-          description: 'Successfully connected to the database',
+          description: 'Successfully connected to the database and fetched schema',
+        });
+      } else {
+        toast({
+          title: 'Connection failed',
+          description: response.error || 'Failed to connect to the database',
+          variant: 'destructive',
         });
       }
     } catch (error) {
@@ -85,7 +91,7 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
     setIsCreating(true);
     
     try {
-      // Ensure we're providing all required properties and they are non-optional
+      // Create a complete connection object with all required properties
       const connectionData = {
         name: values.name,
         host: values.host,
@@ -93,14 +99,14 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
         database: values.database,
         username: values.username,
         password: values.password,
-        tables: [] // Add tables array even though it might be empty initially
+        tables: []
       };
       
       const response = await createPostgresConnection(connectionData);
       if (response.success && response.data) {
         toast({
           title: 'Connection created',
-          description: `${values.name} has been added to your connections`,
+          description: `${values.name} has been added with ${response.data.tables?.length || 0} tables`,
         });
         onConnectionCreated(response.data);
         form.reset();

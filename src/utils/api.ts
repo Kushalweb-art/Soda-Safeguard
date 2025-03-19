@@ -1,6 +1,14 @@
-
 import { toast } from '@/hooks/use-toast';
-import { ApiResponse, CsvDataset, PostgresConnection, ValidationCheck, ValidationResult } from '@/types';
+import { 
+  ApiResponse, 
+  ApiSchemaResponse,
+  CsvDataset, 
+  PostgresConnection, 
+  PostgresTable,
+  SchemaFetchParams,
+  ValidationCheck, 
+  ValidationResult 
+} from '@/types';
 import { 
   getPostgresConnections, storePostgresConnection,
   getCsvDatasets, storeCsvDataset,
@@ -46,11 +54,23 @@ export const fetchPostgresConnections = async (): Promise<ApiResponse<PostgresCo
 export const createPostgresConnection = async (connection: Omit<PostgresConnection, 'id' | 'createdAt'>): Promise<ApiResponse<PostgresConnection>> => {
   try {
     await simulateLatency();
+    
+    // First, fetch schema information
+    const schemaParams: SchemaFetchParams = {
+      host: connection.host,
+      port: connection.port,
+      database: connection.database,
+      username: connection.username,
+      password: connection.password,
+    };
+    
+    const schemaResponse = await fetchDatabaseSchema(schemaParams);
+    
     const newConnection: PostgresConnection = {
       ...connection,
       id: `pg_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      tables: [],
+      tables: schemaResponse.success ? schemaResponse.tables : [],
     };
     
     // Store the new connection in localStorage
@@ -65,14 +85,79 @@ export const createPostgresConnection = async (connection: Omit<PostgresConnecti
   }
 };
 
+export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<ApiSchemaResponse> => {
+  try {
+    await simulateLatency();
+    
+    // Since we're in a frontend-only demo, we'll generate some mock tables and columns
+    // In a real application, this would make an API call to a backend service
+    const mockTables: PostgresTable[] = [
+      {
+        name: 'users',
+        schema: 'public',
+        columns: [
+          { name: 'id', dataType: 'uuid' },
+          { name: 'email', dataType: 'varchar' },
+          { name: 'name', dataType: 'varchar' },
+          { name: 'created_at', dataType: 'timestamp' },
+        ],
+      },
+      {
+        name: 'orders',
+        schema: 'public',
+        columns: [
+          { name: 'id', dataType: 'uuid' },
+          { name: 'user_id', dataType: 'uuid' },
+          { name: 'amount', dataType: 'numeric' },
+          { name: 'status', dataType: 'varchar' },
+          { name: 'created_at', dataType: 'timestamp' },
+        ],
+      },
+      {
+        name: 'products',
+        schema: 'public',
+        columns: [
+          { name: 'id', dataType: 'uuid' },
+          { name: 'name', dataType: 'varchar' },
+          { name: 'description', dataType: 'text' },
+          { name: 'price', dataType: 'numeric' },
+          { name: 'stock', dataType: 'integer' },
+        ],
+      },
+    ];
+    
+    return {
+      success: true,
+      tables: mockTables,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error fetching database schema',
+    };
+  }
+};
+
 export const testPostgresConnection = async (connection: Omit<PostgresConnection, 'id' | 'createdAt'>): Promise<ApiResponse<boolean>> => {
   try {
     await simulateLatency();
-    // In a real app with a backend, this would make an actual connection test
-    // For now, we'll just simulate success
+    
+    // Also fetch schema information when testing
+    const schemaParams: SchemaFetchParams = {
+      host: connection.host,
+      port: connection.port,
+      database: connection.database,
+      username: connection.username,
+      password: connection.password,
+    };
+    
+    const schemaResponse = await fetchDatabaseSchema(schemaParams);
+    
+    // In a real app, we would actually test the connection
+    // For now, we'll just return success if schema fetching succeeded
     return {
-      success: true,
-      data: true,
+      success: schemaResponse.success,
+      data: schemaResponse.success,
     };
   } catch (error) {
     return handleError(error);

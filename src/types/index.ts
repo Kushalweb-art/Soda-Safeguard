@@ -1,4 +1,3 @@
-
 // Dataset Types
 export interface PostgresConnection {
   id: string;
@@ -82,6 +81,21 @@ export interface ValidationResult {
   failedRows?: any[];
   errorMessage?: string;
   createdAt: string;
+}
+
+// Add these new types for database schema fetching
+export interface SchemaFetchParams {
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  password: string;
+}
+
+export interface ApiSchemaResponse {
+  success: boolean;
+  tables?: PostgresTable[];
+  error?: string;
 }
 
 // Component Props
