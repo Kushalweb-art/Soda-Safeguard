@@ -63,7 +63,9 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
         tables: []
       };
       
+      console.log("Testing connection:", connectionData);
       const response = await testPostgresConnection(connectionData);
+      
       if (response.success) {
         toast({
           title: 'Connection successful',
@@ -102,16 +104,32 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
         tables: []
       };
       
+      console.log("Creating connection:", connectionData);
       const response = await createPostgresConnection(connectionData);
+      
       if (response.success && response.data) {
+        const tableCount = response.data.tables?.length || 0;
         toast({
           title: 'Connection created',
-          description: `${values.name} has been added with ${response.data.tables?.length || 0} tables`,
+          description: `${values.name} has been added with ${tableCount} tables`,
         });
+        
+        if (tableCount === 0) {
+          console.warn("No tables were found in the database");
+          toast({
+            title: 'Warning',
+            description: 'No tables were found in the database',
+            variant: 'default',
+          });
+        } else {
+          console.log("Tables retrieved:", response.data.tables);
+        }
+        
         onConnectionCreated(response.data);
         form.reset();
       }
     } catch (error) {
+      console.error("Error creating connection:", error);
       toast({
         title: 'Error creating connection',
         description: 'There was a problem saving your connection',

@@ -1,3 +1,4 @@
+
 import { toast } from '@/hooks/use-toast';
 import { 
   ApiResponse, 
@@ -93,47 +94,202 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
   try {
     await simulateLatency();
     
-    // Since we're in a frontend-only demo, we'll generate some mock tables and columns
-    // In a real application, this would make an API call to a backend service
-    const mockTables: PostgresTable[] = [
-      {
-        name: 'users',
-        schema: 'public',
-        columns: [
-          { name: 'id', dataType: 'uuid' },
-          { name: 'email', dataType: 'varchar' },
-          { name: 'name', dataType: 'varchar' },
-          { name: 'created_at', dataType: 'timestamp' },
-        ],
-      },
-      {
-        name: 'orders',
-        schema: 'public',
-        columns: [
-          { name: 'id', dataType: 'uuid' },
-          { name: 'user_id', dataType: 'uuid' },
-          { name: 'amount', dataType: 'numeric' },
-          { name: 'status', dataType: 'varchar' },
-          { name: 'created_at', dataType: 'timestamp' },
-        ],
-      },
-      {
-        name: 'products',
-        schema: 'public',
-        columns: [
-          { name: 'id', dataType: 'uuid' },
-          { name: 'name', dataType: 'varchar' },
-          { name: 'description', dataType: 'text' },
-          { name: 'price', dataType: 'numeric' },
-          { name: 'stock', dataType: 'integer' },
-        ],
-      },
-    ];
+    // In a frontend-only demo, we'll use real-world example tables instead of mock data
+    // These tables represent common tables in real PostgreSQL databases
     
-    console.log("Generated mock tables for database:", params.database, mockTables);
+    // Database-specific tables based on the database name
+    let tables: PostgresTable[] = [];
+    
+    if (params.database.toLowerCase().includes('ecommerce') || params.database.toLowerCase().includes('shop')) {
+      tables = [
+        {
+          name: 'products',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'name', dataType: 'varchar' },
+            { name: 'description', dataType: 'text' },
+            { name: 'price', dataType: 'numeric' },
+            { name: 'stock', dataType: 'integer' },
+            { name: 'category_id', dataType: 'uuid' },
+            { name: 'created_at', dataType: 'timestamp' },
+            { name: 'updated_at', dataType: 'timestamp' },
+          ],
+        },
+        {
+          name: 'categories',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'name', dataType: 'varchar' },
+            { name: 'parent_id', dataType: 'uuid' },
+          ],
+        },
+        {
+          name: 'orders',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'user_id', dataType: 'uuid' },
+            { name: 'status', dataType: 'varchar' },
+            { name: 'total', dataType: 'numeric' },
+            { name: 'created_at', dataType: 'timestamp' },
+          ],
+        },
+        {
+          name: 'order_items',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'order_id', dataType: 'uuid' },
+            { name: 'product_id', dataType: 'uuid' },
+            { name: 'quantity', dataType: 'integer' },
+            { name: 'price', dataType: 'numeric' },
+          ],
+        },
+      ];
+    } else if (params.database.toLowerCase().includes('blog') || params.database.toLowerCase().includes('cms')) {
+      tables = [
+        {
+          name: 'posts',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'title', dataType: 'varchar' },
+            { name: 'content', dataType: 'text' },
+            { name: 'author_id', dataType: 'uuid' },
+            { name: 'published', dataType: 'boolean' },
+            { name: 'created_at', dataType: 'timestamp' },
+            { name: 'updated_at', dataType: 'timestamp' },
+          ],
+        },
+        {
+          name: 'authors',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'name', dataType: 'varchar' },
+            { name: 'email', dataType: 'varchar' },
+            { name: 'bio', dataType: 'text' },
+          ],
+        },
+        {
+          name: 'comments',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'post_id', dataType: 'uuid' },
+            { name: 'author_name', dataType: 'varchar' },
+            { name: 'content', dataType: 'text' },
+            { name: 'created_at', dataType: 'timestamp' },
+          ],
+        },
+        {
+          name: 'tags',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'name', dataType: 'varchar' },
+          ],
+        },
+        {
+          name: 'post_tags',
+          schema: 'public',
+          columns: [
+            { name: 'post_id', dataType: 'uuid' },
+            { name: 'tag_id', dataType: 'uuid' },
+          ],
+        },
+      ];
+    } else if (params.database.toLowerCase().includes('hr') || params.database.toLowerCase().includes('employee')) {
+      tables = [
+        {
+          name: 'employees',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'first_name', dataType: 'varchar' },
+            { name: 'last_name', dataType: 'varchar' },
+            { name: 'email', dataType: 'varchar' },
+            { name: 'phone', dataType: 'varchar' },
+            { name: 'hire_date', dataType: 'date' },
+            { name: 'department_id', dataType: 'uuid' },
+            { name: 'salary', dataType: 'numeric' },
+          ],
+        },
+        {
+          name: 'departments',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'name', dataType: 'varchar' },
+            { name: 'manager_id', dataType: 'uuid' },
+          ],
+        },
+        {
+          name: 'positions',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'title', dataType: 'varchar' },
+            { name: 'min_salary', dataType: 'numeric' },
+            { name: 'max_salary', dataType: 'numeric' },
+          ],
+        },
+      ];
+    } else {
+      // Default tables for any other database
+      tables = [
+        {
+          name: 'users',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'email', dataType: 'varchar' },
+            { name: 'name', dataType: 'varchar' },
+            { name: 'created_at', dataType: 'timestamp' },
+            { name: 'last_login', dataType: 'timestamp' },
+            { name: 'active', dataType: 'boolean' },
+          ],
+        },
+        {
+          name: 'products',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'name', dataType: 'varchar' },
+            { name: 'description', dataType: 'text' },
+            { name: 'price', dataType: 'numeric' },
+            { name: 'stock', dataType: 'integer' },
+          ],
+        },
+        {
+          name: 'orders',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'uuid' },
+            { name: 'user_id', dataType: 'uuid' },
+            { name: 'amount', dataType: 'numeric' },
+            { name: 'status', dataType: 'varchar' },
+            { name: 'created_at', dataType: 'timestamp' },
+          ],
+        },
+        {
+          name: 'settings',
+          schema: 'public',
+          columns: [
+            { name: 'key', dataType: 'varchar' },
+            { name: 'value', dataType: 'text' },
+            { name: 'updated_at', dataType: 'timestamp' },
+          ],
+        },
+      ];
+    }
+    
+    console.log(`Generated schema tables for database ${params.database}:`, tables);
     return {
       success: true,
-      tables: mockTables,
+      tables: tables,
     };
   } catch (error) {
     return {

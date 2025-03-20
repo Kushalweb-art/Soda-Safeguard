@@ -42,19 +42,26 @@ const DataValidation = () => {
       if (connectionsResponse.success && connectionsResponse.data) {
         console.log("PostgreSQL connections loaded:", connectionsResponse.data);
         
-        // Check if each connection has tables
+        // Log connection details for debugging
         connectionsResponse.data.forEach(conn => {
           console.log(`Connection ${conn.name} has ${conn.tables?.length || 0} tables`);
-          if (conn.tables) {
+          if (conn.tables && conn.tables.length > 0) {
             conn.tables.forEach(table => {
               console.log(`Table ${table.name} has ${table.columns.length} columns`);
             });
+          } else {
+            console.warn(`Connection ${conn.name} has no tables or tables array is empty`);
           }
         });
         
         setPostgresConnections(connectionsResponse.data);
       } else {
         console.error("Failed to load PostgreSQL connections:", connectionsResponse.error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load PostgreSQL connections',
+          variant: 'destructive',
+        });
       }
       
       if (datasetsResponse.success && datasetsResponse.data) {
@@ -62,6 +69,11 @@ const DataValidation = () => {
         console.log("Loaded CSV datasets:", datasetsResponse.data);
       } else {
         console.error("Failed to load CSV datasets:", datasetsResponse.error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load CSV datasets',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error("Error loading data:", error);
