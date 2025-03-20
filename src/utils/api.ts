@@ -1,4 +1,3 @@
-
 import { toast } from '@/hooks/use-toast';
 import { 
   ApiResponse, 
@@ -69,11 +68,18 @@ export const createPostgresConnection = async (connection: Omit<PostgresConnecti
     
     const schemaResponse = await fetchDatabaseSchema(schemaParams);
     
+    if (!schemaResponse.success) {
+      return {
+        success: false,
+        error: schemaResponse.error || 'Failed to connect to database'
+      };
+    }
+    
     const newConnection: PostgresConnection = {
       ...connection,
       id: `pg_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      tables: schemaResponse.success ? schemaResponse.tables : [],
+      tables: schemaResponse.tables || [],
     };
     
     console.log("Storing new PostgreSQL connection with tables:", newConnection.tables);
@@ -94,187 +100,35 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
   try {
     await simulateLatency();
     
-    console.log(`Fetching schema for database: ${params.database}`);
+    console.log(`Attempting to connect to database: ${params.database}`);
     
-    // Generate tables based on the database name to simulate real database connections
-    let tables: PostgresTable[] = [];
+    // Here we would normally connect to a real database
+    // In this simulation, we'll be honest about database existence
     
-    // For this demo, we'll determine the tables based on the database name
-    // In a real app, this would be replaced with actual database queries
-    
-    if (params.database.toLowerCase().includes('ecommerce') || params.database.toLowerCase().includes('shop')) {
-      tables = [
-        {
-          name: 'products',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'name', dataType: 'varchar' },
-            { name: 'description', dataType: 'text' },
-            { name: 'price', dataType: 'numeric' },
-            { name: 'stock', dataType: 'integer' },
-            { name: 'category_id', dataType: 'uuid' },
-            { name: 'created_at', dataType: 'timestamp' },
-            { name: 'updated_at', dataType: 'timestamp' },
-          ],
-        },
-        {
-          name: 'categories',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'name', dataType: 'varchar' },
-            { name: 'parent_id', dataType: 'uuid' },
-          ],
-        },
-        {
-          name: 'orders',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'user_id', dataType: 'uuid' },
-            { name: 'status', dataType: 'varchar' },
-            { name: 'total', dataType: 'numeric' },
-            { name: 'created_at', dataType: 'timestamp' },
-          ],
-        },
-        {
-          name: 'order_items',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'order_id', dataType: 'uuid' },
-            { name: 'product_id', dataType: 'uuid' },
-            { name: 'quantity', dataType: 'integer' },
-            { name: 'price', dataType: 'numeric' },
-          ],
-        },
-      ];
-    } else if (params.database.toLowerCase().includes('blog') || params.database.toLowerCase().includes('cms')) {
-      tables = [
-        {
-          name: 'posts',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'title', dataType: 'varchar' },
-            { name: 'content', dataType: 'text' },
-            { name: 'author_id', dataType: 'uuid' },
-            { name: 'published', dataType: 'boolean' },
-            { name: 'created_at', dataType: 'timestamp' },
-            { name: 'updated_at', dataType: 'timestamp' },
-          ],
-        },
-        {
-          name: 'authors',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'name', dataType: 'varchar' },
-            { name: 'email', dataType: 'varchar' },
-            { name: 'bio', dataType: 'text' },
-          ],
-        },
-        {
-          name: 'comments',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'post_id', dataType: 'uuid' },
-            { name: 'author_name', dataType: 'varchar' },
-            { name: 'content', dataType: 'text' },
-            { name: 'created_at', dataType: 'timestamp' },
-          ],
-        },
-        {
-          name: 'tags',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'name', dataType: 'varchar' },
-          ],
-        },
-      ];
-    } else if (params.database.toLowerCase().includes('hr') || params.database.toLowerCase().includes('employee')) {
-      tables = [
-        {
-          name: 'employees',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'first_name', dataType: 'varchar' },
-            { name: 'last_name', dataType: 'varchar' },
-            { name: 'email', dataType: 'varchar' },
-            { name: 'phone', dataType: 'varchar' },
-            { name: 'hire_date', dataType: 'date' },
-            { name: 'department_id', dataType: 'uuid' },
-            { name: 'salary', dataType: 'numeric' },
-          ],
-        },
-        {
-          name: 'departments',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'name', dataType: 'varchar' },
-            { name: 'manager_id', dataType: 'uuid' },
-          ],
-        },
-        {
-          name: 'positions',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'title', dataType: 'varchar' },
-            { name: 'min_salary', dataType: 'numeric' },
-            { name: 'max_salary', dataType: 'numeric' },
-          ],
-        },
-      ];
-    } else {
-      // Default tables for any other database
-      tables = [
-        {
-          name: 'users',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'email', dataType: 'varchar' },
-            { name: 'name', dataType: 'varchar' },
-            { name: 'created_at', dataType: 'timestamp' },
-            { name: 'last_login', dataType: 'timestamp' },
-            { name: 'active', dataType: 'boolean' },
-          ],
-        },
-        {
-          name: 'products',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'name', dataType: 'varchar' },
-            { name: 'description', dataType: 'text' },
-            { name: 'price', dataType: 'numeric' },
-            { name: 'stock', dataType: 'integer' },
-          ],
-        },
-        {
-          name: 'orders',
-          schema: 'public',
-          columns: [
-            { name: 'id', dataType: 'uuid' },
-            { name: 'user_id', dataType: 'uuid' },
-            { name: 'amount', dataType: 'numeric' },
-            { name: 'status', dataType: 'varchar' },
-            { name: 'created_at', dataType: 'timestamp' },
-          ],
-        },
-      ];
+    // Check if database name is valid
+    if (!params.database || params.database.trim() === '') {
+      return {
+        success: false,
+        error: 'Database name cannot be empty',
+      };
     }
     
-    console.log(`Generated ${tables.length} tables for database ${params.database}:`, tables);
+    // Simulate database connection errors based on database name
+    if (params.database.toLowerCase().includes('invalid') || 
+        params.database.toLowerCase().includes('error') ||
+        params.database.toLowerCase().includes('notfound')) {
+      return {
+        success: false,
+        error: `Unable to connect to database "${params.database}". Database does not exist or access is denied.`,
+      };
+    }
+    
+    // For the demo, we'll return empty tables array for most databases
+    // This simulates a successful connection but no tables found
     return {
       success: true,
-      tables: tables,
+      tables: [],
+      message: `Connected to database "${params.database}" successfully, but no tables were found.`
     };
   } catch (error) {
     return {
@@ -284,11 +138,9 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
   }
 };
 
-export const testPostgresConnection = async (connection: Omit<PostgresConnection, 'id' | 'createdAt'>): Promise<ApiResponse<boolean> & { tables?: PostgresTable[] }> => {
+export const testPostgresConnection = async (connection: Omit<PostgresConnection, 'id' | 'createdAt'>): Promise<ApiResponse<boolean> & { tables?: PostgresTable[], message?: string }> => {
   try {
     await simulateLatency();
-    
-    // In a real app, we would actually test the connection here
     
     // For simulation, fetch schema information to test connection
     const schemaParams: SchemaFetchParams = {
@@ -305,7 +157,8 @@ export const testPostgresConnection = async (connection: Omit<PostgresConnection
       return {
         success: true,
         data: true,
-        tables: schemaResponse.tables
+        tables: schemaResponse.tables || [],
+        message: schemaResponse.message
       };
     } else {
       return {

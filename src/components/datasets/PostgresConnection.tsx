@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Database, ServerCrash, KeyRound, Server, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Database, ServerCrash, KeyRound, Server, ShieldCheck, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
 import { createPostgresConnection, testPostgresConnection } from '@/utils/api';
 import { PostgresConnection } from '@/types';
 
@@ -32,6 +33,11 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
   const [isTesting, setIsTesting] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  } | null>(null);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -47,6 +53,8 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
   
   const handleTestConnection = async () => {
     setTestSuccess(false);
+    setConnectionStatus(null);
+    
     const formValid = await form.trigger();
     if (!formValid) return;
     
@@ -70,17 +78,36 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
       
       if (response.success) {
         setTestSuccess(true);
-        toast({
-          title: 'Connection successful',
-          description: 'Successfully connected to the database and fetched schema',
-        });
         
+        // Check if tables exist
         if (response.tables && response.tables.length > 0) {
+          setConnectionStatus({
+            success: true,
+            message: `Successfully connected to the database. Found ${response.tables.length} tables.`
+          });
+          
           console.log(`Found ${response.tables.length} tables in the database`);
         } else {
+          // Success but no tables
+          setConnectionStatus({
+            success: true,
+            message: response.message || 'Successfully connected to the database, but no tables were found.'
+          });
+          
           console.warn("No tables found in the database");
         }
+        
+        toast({
+          title: 'Connection successful',
+          description: 'Successfully connected to the database',
+        });
       } else {
+        // Connection failed
+        setConnectionStatus({
+          success: false,
+          error: response.error || 'Failed to connect to the database'
+        });
+        
         toast({
           title: 'Connection failed',
           description: response.error || 'Failed to connect to the database',
@@ -89,6 +116,11 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
       }
     } catch (error) {
       console.error("Connection error:", error);
+      setConnectionStatus({
+        success: false,
+        error: 'Failed to connect to the database. Please check your credentials.'
+      });
+      
       toast({
         title: 'Connection failed',
         description: 'Failed to connect to the database. Please check your credentials.',
@@ -100,6 +132,15 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
   };
   
   const onSubmit = async (values: FormValues) => {
+    if (!testSuccess) {
+      toast({
+        title: 'Test connection first',
+        description: 'Please test the connection before saving',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setIsCreating(true);
     
     try {
@@ -119,18 +160,21 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
       
       if (response.success && response.data) {
         const tableCount = response.data.tables?.length || 0;
+        
+        let toastMessage = `${values.name} has been added successfully`;
+        if (tableCount > 0) {
+          toastMessage += ` with ${tableCount} tables`;
+        } else {
+          toastMessage += `, but no tables were found`;
+        }
+        
         toast({
           title: 'Connection created',
-          description: `${values.name} has been added with ${tableCount} tables`,
+          description: toastMessage,
         });
         
         if (tableCount === 0) {
           console.warn("No tables were found in the database");
-          toast({
-            title: 'Warning',
-            description: 'No tables were found in the database',
-            variant: 'default',
-          });
         } else {
           console.log("Tables retrieved:", response.data.tables);
         }
@@ -138,6 +182,13 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
         onConnectionCreated(response.data);
         form.reset();
         setTestSuccess(false);
+        setConnectionStatus(null);
+      } else {
+        toast({
+          title: 'Error creating connection',
+          description: response.error || 'There was a problem saving your connection',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error("Error creating connection:", error);
@@ -287,7 +338,23 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
               />
             </div>
             
-            {testSuccess && (
+            {connectionStatus && (
+              <Alert variant={connectionStatus.success ? "default" : "destructive"} className="mt-4">
+                {connectionStatus.success ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <XCircle className="h-4 w-4" />
+                )}
+                <AlertTitle>
+                  {connectionStatus.success ? "Connection Successful" : "Connection Failed"}
+                </AlertTitle>
+                <AlertDescription>
+                  {connectionStatus.success ? connectionStatus.message : connectionStatus.error}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {testSuccess && !connectionStatus && (
               <div className="bg-green-50 border border-green-200 text-green-800 rounded-md p-3 flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5" />
                 <div>
@@ -309,7 +376,7 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
               
               <Button 
                 type="submit" 
-                disabled={isTesting || isCreating}
+                disabled={isTesting || isCreating || !testSuccess}
               >
                 {isCreating ? 'Creating...' : 'Save Connection'}
               </Button>
