@@ -9,11 +9,10 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Database, ServerCrash, KeyRound, Server, ShieldCheck, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
+import { Database, ServerCrash, KeyRound, Server, ShieldCheck, CheckCircle2, AlertCircle, XCircle, Info } from 'lucide-react';
 import { createPostgresConnection, testPostgresConnection } from '@/utils/api';
 import { PostgresConnection } from '@/types';
 
-// Updated schema to make name optional
 const formSchema = z.object({
   name: z.string().optional(),
   host: z.string().min(1, 'Host is required'),
@@ -218,6 +217,16 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <Alert variant="info" className="mb-6">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Demo Mode</AlertTitle>
+          <AlertDescription>
+            This is a frontend-only demo. No actual database connections are being made.
+            In a real application, these requests would be sent to a backend server that handles
+            the PostgreSQL connections securely. Try using "wrong" as username or password to see error handling.
+          </AlertDescription>
+        </Alert>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -291,7 +300,8 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
                     </div>
                   </FormControl>
                   <FormDescription>
-                    Enter the name of your database (e.g., postgres, employees, customers)
+                    Enter the name of your database (e.g., postgres, employees, customers).
+                    For demo purposes, use "Sales" to see tables.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -315,6 +325,9 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
                         />
                       </div>
                     </FormControl>
+                    <FormDescription>
+                      Use "wrong" to simulate authentication failure
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -336,6 +349,9 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
                         />
                       </div>
                     </FormControl>
+                    <FormDescription>
+                      Use "wrong" to simulate authentication failure
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

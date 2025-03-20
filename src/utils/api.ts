@@ -1,4 +1,3 @@
-
 import { toast } from '@/hooks/use-toast';
 import { 
   ApiResponse, 
@@ -58,21 +57,13 @@ export const createPostgresConnection = async (connection: Omit<PostgresConnecti
   try {
     await simulateLatency();
     
-    // First, fetch schema information
-    const schemaParams: SchemaFetchParams = {
-      host: connection.host,
-      port: connection.port,
-      database: connection.database,
-      username: connection.username,
-      password: connection.password,
-    };
+    // First, test the connection to ensure it's valid
+    const testResponse = await testPostgresConnection(connection);
     
-    const schemaResponse = await fetchDatabaseSchema(schemaParams);
-    
-    if (!schemaResponse.success) {
+    if (!testResponse.success) {
       return {
         success: false,
-        error: schemaResponse.error || 'Failed to connect to database'
+        error: testResponse.error || 'Failed to connect to database'
       };
     }
     
@@ -80,7 +71,7 @@ export const createPostgresConnection = async (connection: Omit<PostgresConnecti
       ...connection,
       id: `pg_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      tables: schemaResponse.tables || [],
+      tables: testResponse.tables || [],
     };
     
     console.log("Storing new PostgreSQL connection with tables:", newConnection.tables);
@@ -101,10 +92,12 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
   try {
     await simulateLatency();
     
-    console.log(`Attempting to connect to database: ${params.database}`);
+    console.log(`[MOCK] Attempting to connect to database: ${params.database}`);
     
-    // Here we would normally connect to a real database
-    // In this simulation, we'll be honest about database existence
+    // IMPORTANT NOTE: This is a frontend-only demo.
+    // In a real application, this would be a backend API that actually
+    // connects to the PostgreSQL database using node-postgres, pg-promise,
+    // or a similar library, and would run proper connection validation.
     
     // Check if database name is valid
     if (!params.database || params.database.trim() === '') {
@@ -114,18 +107,18 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
       };
     }
     
-    // Simulate database connection errors based on database name
-    if (params.database.toLowerCase().includes('invalid') || 
-        params.database.toLowerCase().includes('error') ||
-        params.database.toLowerCase().includes('notfound')) {
+    // For demo purposes, simulate a failed login for specific credentials
+    if (params.username === 'wrong' || params.password === 'wrong') {
       return {
         success: false,
-        error: `Unable to connect to database "${params.database}". Database does not exist or access is denied.`,
+        error: 'Authentication failed. Invalid username or password.',
       };
     }
     
-    // For the demo, we'll check specifically for "Sales" database and return actual tables including "employees"
+    // For demo purposes, we'll return some fake tables for the "Sales" database
+    // In a real implementation, we would query the database schema using SQL
     if (params.database === "Sales") {
+      // Simulate database with tables for demo
       return {
         success: true,
         tables: [
@@ -151,7 +144,7 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
             ]
           }
         ],
-        message: `Connected to database "${params.database}" successfully. Found 2 tables.`
+        message: `[DEMO] Connected to database "${params.database}" successfully. Found 2 tables.`
       };
     }
     
@@ -159,7 +152,7 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
     return {
       success: true,
       tables: [],
-      message: `Connected to database "${params.database}" successfully, but no tables were found.`
+      message: `[DEMO] Connected to database "${params.database}" successfully, but no tables were found.`
     };
   } catch (error) {
     return {
