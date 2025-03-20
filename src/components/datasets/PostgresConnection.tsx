@@ -13,8 +13,9 @@ import { Database, ServerCrash, KeyRound, Server, ShieldCheck, CheckCircle2, Ale
 import { createPostgresConnection, testPostgresConnection } from '@/utils/api';
 import { PostgresConnection } from '@/types';
 
+// Updated schema to make name optional
 const formSchema = z.object({
-  name: z.string().min(1, 'Connection name is required'),
+  name: z.string().optional(),
   host: z.string().min(1, 'Host is required'),
   port: z.coerce.number().int().positive().default(5432),
   database: z.string().min(1, 'Database name is required'),
@@ -55,16 +56,16 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
     setTestSuccess(false);
     setConnectionStatus(null);
     
-    const formValid = await form.trigger();
+    const formValid = await form.trigger(['host', 'port', 'database', 'username', 'password']);
     if (!formValid) return;
     
     const values = form.getValues();
     setIsTesting(true);
     
     try {
-      // Create a complete connection object with all required properties
+      // Create a connection object with all required properties
       const connectionData = {
-        name: values.name,
+        name: values.name || values.database, // Use database name if connection name not provided
         host: values.host,
         port: values.port,
         database: values.database,
@@ -144,9 +145,12 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
     setIsCreating(true);
     
     try {
+      // Make sure we have a name - use database name if not provided
+      const connectionName = values.name || values.database;
+      
       // Create a complete connection object with all required properties
       const connectionData = {
-        name: values.name,
+        name: connectionName,
         host: values.host,
         port: values.port,
         database: values.database,
@@ -161,7 +165,7 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
       if (response.success && response.data) {
         const tableCount = response.data.tables?.length || 0;
         
-        let toastMessage = `${values.name} has been added successfully`;
+        let toastMessage = `${connectionName} has been added successfully`;
         if (tableCount > 0) {
           toastMessage += ` with ${tableCount} tables`;
         } else {
@@ -221,12 +225,12 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Connection Name</FormLabel>
+                  <FormLabel>Connection Name (Optional)</FormLabel>
                   <FormControl>
                     <Input placeholder="My Production Database" {...field} />
                   </FormControl>
                   <FormDescription>
-                    A friendly name to identify this connection
+                    A friendly name to identify this connection. If not provided, database name will be used.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

@@ -1,3 +1,4 @@
+
 import { toast } from '@/hooks/use-toast';
 import { 
   ApiResponse, 
@@ -123,8 +124,38 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
       };
     }
     
-    // For the demo, we'll return empty tables array for most databases
-    // This simulates a successful connection but no tables found
+    // For the demo, we'll check specifically for "Sales" database and return actual tables including "employees"
+    if (params.database === "Sales") {
+      return {
+        success: true,
+        tables: [
+          {
+            name: "employees",
+            schema: "public",
+            columns: [
+              { name: "id", dataType: "uuid" },
+              { name: "name", dataType: "varchar" },
+              { name: "position", dataType: "varchar" },
+              { name: "salary", dataType: "numeric" },
+              { name: "hire_date", dataType: "date" }
+            ]
+          },
+          {
+            name: "departments",
+            schema: "public",
+            columns: [
+              { name: "id", dataType: "uuid" },
+              { name: "name", dataType: "varchar" },
+              { name: "manager_id", dataType: "uuid" },
+              { name: "created_at", dataType: "timestamp" }
+            ]
+          }
+        ],
+        message: `Connected to database "${params.database}" successfully. Found 2 tables.`
+      };
+    }
+    
+    // For any other database name, we'll return empty tables array
     return {
       success: true,
       tables: [],
