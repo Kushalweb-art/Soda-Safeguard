@@ -94,11 +94,13 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
   try {
     await simulateLatency();
     
-    // In a frontend-only demo, we'll use real-world example tables instead of mock data
-    // These tables represent common tables in real PostgreSQL databases
+    console.log(`Fetching schema for database: ${params.database}`);
     
-    // Database-specific tables based on the database name
+    // Generate tables based on the database name to simulate real database connections
     let tables: PostgresTable[] = [];
+    
+    // For this demo, we'll determine the tables based on the database name
+    // In a real app, this would be replaced with actual database queries
     
     if (params.database.toLowerCase().includes('ecommerce') || params.database.toLowerCase().includes('shop')) {
       tables = [
@@ -192,14 +194,6 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
             { name: 'name', dataType: 'varchar' },
           ],
         },
-        {
-          name: 'post_tags',
-          schema: 'public',
-          columns: [
-            { name: 'post_id', dataType: 'uuid' },
-            { name: 'tag_id', dataType: 'uuid' },
-          ],
-        },
       ];
     } else if (params.database.toLowerCase().includes('hr') || params.database.toLowerCase().includes('employee')) {
       tables = [
@@ -274,19 +268,10 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
             { name: 'created_at', dataType: 'timestamp' },
           ],
         },
-        {
-          name: 'settings',
-          schema: 'public',
-          columns: [
-            { name: 'key', dataType: 'varchar' },
-            { name: 'value', dataType: 'text' },
-            { name: 'updated_at', dataType: 'timestamp' },
-          ],
-        },
       ];
     }
     
-    console.log(`Generated schema tables for database ${params.database}:`, tables);
+    console.log(`Generated ${tables.length} tables for database ${params.database}:`, tables);
     return {
       success: true,
       tables: tables,
@@ -299,11 +284,13 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
   }
 };
 
-export const testPostgresConnection = async (connection: Omit<PostgresConnection, 'id' | 'createdAt'>): Promise<ApiResponse<boolean>> => {
+export const testPostgresConnection = async (connection: Omit<PostgresConnection, 'id' | 'createdAt'>): Promise<ApiResponse<boolean> & { tables?: PostgresTable[] }> => {
   try {
     await simulateLatency();
     
-    // Also fetch schema information when testing
+    // In a real app, we would actually test the connection here
+    
+    // For simulation, fetch schema information to test connection
     const schemaParams: SchemaFetchParams = {
       host: connection.host,
       port: connection.port,
@@ -314,12 +301,18 @@ export const testPostgresConnection = async (connection: Omit<PostgresConnection
     
     const schemaResponse = await fetchDatabaseSchema(schemaParams);
     
-    // In a real app, we would actually test the connection
-    // For now, we'll just return success if schema fetching succeeded
-    return {
-      success: schemaResponse.success,
-      data: schemaResponse.success,
-    };
+    if (schemaResponse.success) {
+      return {
+        success: true,
+        data: true,
+        tables: schemaResponse.tables
+      };
+    } else {
+      return {
+        success: false,
+        error: schemaResponse.error || 'Failed to retrieve database schema',
+      };
+    }
   } catch (error) {
     return handleError(error);
   }
@@ -448,6 +441,7 @@ export const runValidation = async (checkId: string): Promise<ApiResponse<Valida
     } else {
       const pgConnections = getPostgresConnections();
       dataset = pgConnections.find(c => c.id === check.dataset.id);
+      console.log("Running validation on PostgreSQL dataset:", dataset);
     }
     
     if (!dataset) {
@@ -530,6 +524,51 @@ export const runValidation = async (checkId: string): Promise<ApiResponse<Valida
         failedCount = passed ? 0 : Math.floor(Math.random() * totalRows * 0.05); // Up to 5% failures
     }
     
+    // Generate some sample failed rows for display in results
+    const failedRows = [];
+    if (failedCount > 0) {
+      // Create some sample failed rows
+      const pgTable = check.dataset.type === 'postgres' && check.table 
+        ? (dataset as PostgresConnection).tables?.find(t => t.name === check.table)
+        : null;
+        
+      if (pgTable) {
+        // Create sample rows based on the PostgreSQL table schema
+        for (let i = 0; i < Math.min(failedCount, 10); i++) {
+          const row: Record<string, any> = {};
+          pgTable.columns.forEach(col => {
+            // Generate sample data for each column
+            switch (col.dataType) {
+              case 'uuid':
+                row[col.name] = `mock-uuid-${i}-${Math.floor(Math.random() * 1000)}`;
+                break;
+              case 'varchar':
+              case 'text':
+                row[col.name] = col.name === check.column 
+                  ? (check.type === 'valid_values' ? 'INVALID_VALUE' : `Sample ${col.name} ${i}`)
+                  : `Sample ${col.name} ${i}`;
+                break;
+              case 'numeric':
+              case 'integer':
+                row[col.name] = Math.floor(Math.random() * 1000);
+                break;
+              case 'boolean':
+                row[col.name] = Math.random() > 0.5;
+                break;
+              case 'date':
+              case 'timestamp':
+                row[col.name] = new Date().toISOString();
+                break;
+              default:
+                row[col.name] = `Sample ${col.name} ${i}`;
+            }
+          });
+          row._reason = `Failed ${check.type} validation`;
+          failedRows.push(row);
+        }
+      }
+    }
+    
     const result: ValidationResult = {
       id: `result_${Date.now()}`,
       checkId,
@@ -546,17 +585,8 @@ export const runValidation = async (checkId: string): Promise<ApiResponse<Valida
       },
       createdAt: new Date().toISOString(),
       errorMessage,
+      failedRows: failedRows.length > 0 ? failedRows : undefined,
     };
-    
-    // Add failed rows for CSV datasets if validation failed
-    if (!passed && check.dataset.type === 'csv') {
-      const csvDataset = dataset as CsvDataset;
-      result.failedRows = Array.from({ length: Math.min(failedCount, csvDataset.previewData.length) })
-        .map((_, i) => ({
-          ...csvDataset.previewData[i],
-          _reason: `Failed ${check.type} validation`,
-        }));
-    }
     
     // Store the result
     storeValidationResult(result);

@@ -4,11 +4,11 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Database, ServerCrash, KeyRound, Server, ShieldCheck } from 'lucide-react';
+import { Database, ServerCrash, KeyRound, Server, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { createPostgresConnection, testPostgresConnection } from '@/utils/api';
 import { PostgresConnection } from '@/types';
 
@@ -31,20 +31,22 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
   const { toast } = useToast();
   const [isTesting, setIsTesting] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [testSuccess, setTestSuccess] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      host: '',
+      host: 'localhost',
       port: 5432,
       database: '',
-      username: '',
+      username: 'postgres',
       password: '',
     },
   });
   
   const handleTestConnection = async () => {
+    setTestSuccess(false);
     const formValid = await form.trigger();
     if (!formValid) return;
     
@@ -67,10 +69,17 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
       const response = await testPostgresConnection(connectionData);
       
       if (response.success) {
+        setTestSuccess(true);
         toast({
           title: 'Connection successful',
           description: 'Successfully connected to the database and fetched schema',
         });
+        
+        if (response.tables && response.tables.length > 0) {
+          console.log(`Found ${response.tables.length} tables in the database`);
+        } else {
+          console.warn("No tables found in the database");
+        }
       } else {
         toast({
           title: 'Connection failed',
@@ -79,6 +88,7 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
         });
       }
     } catch (error) {
+      console.error("Connection error:", error);
       toast({
         title: 'Connection failed',
         description: 'Failed to connect to the database. Please check your credentials.',
@@ -127,6 +137,7 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
         
         onConnectionCreated(response.data);
         form.reset();
+        setTestSuccess(false);
       }
     } catch (error) {
       console.error("Error creating connection:", error);
@@ -145,7 +156,7 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
       <CardHeader>
         <CardTitle className="text-xl flex items-center gap-2">
           <Database className="h-5 w-5" />
-          Connect to PostgreSQL
+          Connect to PostgreSQL Database
         </CardTitle>
         <CardDescription>
           Add a PostgreSQL database connection for data validation
@@ -224,6 +235,9 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
                       />
                     </div>
                   </FormControl>
+                  <FormDescription>
+                    Enter the name of your database (e.g., postgres, employees, customers)
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -273,6 +287,16 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
               />
             </div>
             
+            {testSuccess && (
+              <div className="bg-green-50 border border-green-200 text-green-800 rounded-md p-3 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5" />
+                <div>
+                  <p className="font-medium">Connection Tested Successfully</p>
+                  <p className="text-sm">You can now save this connection</p>
+                </div>
+              </div>
+            )}
+            
             <div className="flex justify-between pt-2">
               <Button
                 type="button"
@@ -283,7 +307,10 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
                 {isTesting ? 'Testing...' : 'Test Connection'}
               </Button>
               
-              <Button type="submit" disabled={isTesting || isCreating}>
+              <Button 
+                type="submit" 
+                disabled={isTesting || isCreating}
+              >
                 {isCreating ? 'Creating...' : 'Save Connection'}
               </Button>
             </div>
