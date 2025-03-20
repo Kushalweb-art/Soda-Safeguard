@@ -97,6 +97,7 @@ export interface ApiSchemaResponse {
   success: boolean;
   tables?: PostgresTable[];
   error?: string;
+  message?: string; // Added message property to fix the type error
 }
 
 // Component Props
