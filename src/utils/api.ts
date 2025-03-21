@@ -1,4 +1,3 @@
-
 import { toast } from '@/hooks/use-toast';
 import { 
   ApiResponse, 
@@ -177,7 +176,10 @@ export const runValidation = async (checkId: string): Promise<ApiResponse<Valida
     const resultsResponse = await fetchApi<ValidationResult[]>('/validation/results');
     
     if (!resultsResponse.success || !resultsResponse.data) {
-      return resultsResponse;
+      return {
+        success: false,
+        error: resultsResponse.error || 'Failed to fetch validation results',
+      };
     }
     
     // Find the result for this check
