@@ -3,9 +3,14 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import os
+from dotenv import load_dotenv
 
 from app.database import create_tables
 from app.routes import postgres_router, dataset_router, validation_router
+
+# Load environment variables
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,16 +26,18 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
-origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",  # Vite dev server
-    "http://127.0.0.1:5173"
-]
+# Configure CORS with settings from environment
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
+if not allowed_origins or allowed_origins[0] == "":
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:5173"
+    ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

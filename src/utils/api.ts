@@ -49,18 +49,20 @@ const fetchApi = async <T>(
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
+        ...options.headers,
       },
       ...options,
     });
     
-    const data = await response.json();
-    
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
       return {
         success: false,
-        error: data.error || `Error: ${response.status} ${response.statusText}`,
+        error: errorData.error || `Error: ${response.status} ${response.statusText}`,
       };
     }
+    
+    const data = await response.json();
     
     return data;
   } catch (error) {
@@ -93,14 +95,16 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
     });
     
     const response = await fetch(`${API_BASE_URL}/postgres/schema?${queryParams.toString()}`);
-    const data = await response.json();
     
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
       return {
         success: false,
-        error: data.error || `Error: ${response.status} ${response.statusText}`,
+        error: errorData.error || `Error: ${response.status} ${response.statusText}`,
       };
     }
+    
+    const data = await response.json();
     
     return data;
   } catch (error) {
@@ -135,14 +139,15 @@ export const uploadCsvFile = async (file: File): Promise<ApiResponse<CsvDataset>
       body: formData,
     });
     
-    const data = await response.json();
-    
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
       return {
         success: false,
-        error: data.error || `Error: ${response.status} ${response.statusText}`,
+        error: errorData.error || `Error: ${response.status} ${response.statusText}`,
       };
     }
+    
+    const data = await response.json();
     
     return data;
   } catch (error) {
