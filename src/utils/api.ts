@@ -1,3 +1,4 @@
+
 import { toast } from '@/hooks/use-toast';
 import { 
   ApiResponse, 
@@ -10,17 +11,16 @@ import {
   ValidationCheckType,
   ValidationResult 
 } from '@/types';
-import { 
-  getPostgresConnections, storePostgresConnection,
-  getCsvDatasets, storeCsvDataset,
-  getValidationChecks, storeValidationCheck,
-  getValidationResults, storeValidationResult 
-} from './storage';
 
-// Helper function to simulate API latency
+// API base URL
+const API_BASE_URL = 'http://localhost:8000/api';
+
+// Helper function to simulate API latency in development for smoother UX
 const simulateLatency = async () => {
-  const latency = 500 + Math.random() * 1000;
-  return new Promise(resolve => setTimeout(resolve, latency));
+  if (process.env.NODE_ENV === 'development') {
+    const latency = 500 + Math.random() * 500;
+    return new Promise(resolve => setTimeout(resolve, latency));
+  }
 };
 
 // Function to handle API errors consistently
@@ -38,122 +38,71 @@ const handleError = (error: any): ApiResponse<never> => {
   };
 };
 
-// Postgres Connections API
-export const fetchPostgresConnections = async (): Promise<ApiResponse<PostgresConnection[]>> => {
+// Generic fetch function
+const fetchApi = async <T>(
+  endpoint: string, 
+  options: RequestInit = {}
+): Promise<ApiResponse<T>> => {
   try {
     await simulateLatency();
-    const connections = getPostgresConnections();
-    console.log("Fetched PostgreSQL connections:", connections);
-    return {
-      success: true,
-      data: connections,
-    };
+    
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      ...options,
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error || `Error: ${response.status} ${response.statusText}`,
+      };
+    }
+    
+    return data;
   } catch (error) {
     return handleError(error);
   }
 };
 
+// Postgres Connections API
+export const fetchPostgresConnections = async (): Promise<ApiResponse<PostgresConnection[]>> => {
+  return fetchApi<PostgresConnection[]>('/postgres/connections');
+};
+
 export const createPostgresConnection = async (connection: Omit<PostgresConnection, 'id' | 'createdAt'>): Promise<ApiResponse<PostgresConnection>> => {
-  try {
-    await simulateLatency();
-    
-    // First, test the connection to ensure it's valid
-    const testResponse = await testPostgresConnection(connection);
-    
-    if (!testResponse.success) {
-      return {
-        success: false,
-        error: testResponse.error || 'Failed to connect to database'
-      };
-    }
-    
-    const newConnection: PostgresConnection = {
-      ...connection,
-      id: `pg_${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      tables: testResponse.tables || [],
-    };
-    
-    console.log("Storing new PostgreSQL connection with tables:", newConnection.tables);
-    
-    // Store the new connection in localStorage
-    storePostgresConnection(newConnection);
-    
-    return {
-      success: true,
-      data: newConnection,
-    };
-  } catch (error) {
-    return handleError(error);
-  }
+  return fetchApi<PostgresConnection>('/postgres/connections', {
+    method: 'POST',
+    body: JSON.stringify(connection),
+  });
 };
 
 export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<ApiSchemaResponse> => {
   try {
     await simulateLatency();
     
-    console.log(`[MOCK] Attempting to connect to database: ${params.database}`);
+    const queryParams = new URLSearchParams({
+      host: params.host,
+      port: params.port.toString(),
+      database: params.database,
+      username: params.username,
+      password: params.password,
+    });
     
-    // IMPORTANT NOTE: This is a frontend-only demo.
-    // In a real application, this would be a backend API that actually
-    // connects to the PostgreSQL database using node-postgres, pg-promise,
-    // or a similar library, and would run proper connection validation.
+    const response = await fetch(`${API_BASE_URL}/postgres/schema?${queryParams.toString()}`);
+    const data = await response.json();
     
-    // Check if database name is valid
-    if (!params.database || params.database.trim() === '') {
+    if (!response.ok) {
       return {
         success: false,
-        error: 'Database name cannot be empty',
+        error: data.error || `Error: ${response.status} ${response.statusText}`,
       };
     }
     
-    // For demo purposes, simulate a failed login for specific credentials
-    if (params.username === 'wrong' || params.password === 'wrong') {
-      return {
-        success: false,
-        error: 'Authentication failed. Invalid username or password.',
-      };
-    }
-    
-    // For demo purposes, we'll return some fake tables for the "Sales" database
-    // In a real implementation, we would query the database schema using SQL
-    if (params.database === "Sales") {
-      // Simulate database with tables for demo
-      return {
-        success: true,
-        tables: [
-          {
-            name: "employees",
-            schema: "public",
-            columns: [
-              { name: "id", dataType: "uuid" },
-              { name: "name", dataType: "varchar" },
-              { name: "position", dataType: "varchar" },
-              { name: "salary", dataType: "numeric" },
-              { name: "hire_date", dataType: "date" }
-            ]
-          },
-          {
-            name: "departments",
-            schema: "public",
-            columns: [
-              { name: "id", dataType: "uuid" },
-              { name: "name", dataType: "varchar" },
-              { name: "manager_id", dataType: "uuid" },
-              { name: "created_at", dataType: "timestamp" }
-            ]
-          }
-        ],
-        message: `[DEMO] Connected to database "${params.database}" successfully. Found 2 tables.`
-      };
-    }
-    
-    // For any other database name, we'll return empty tables array
-    return {
-      success: true,
-      tables: [],
-      message: `[DEMO] Connected to database "${params.database}" successfully, but no tables were found.`
-    };
+    return data;
   } catch (error) {
     return {
       success: false,
@@ -163,102 +112,39 @@ export const fetchDatabaseSchema = async (params: SchemaFetchParams): Promise<Ap
 };
 
 export const testPostgresConnection = async (connection: Omit<PostgresConnection, 'id' | 'createdAt'>): Promise<ApiResponse<boolean> & { tables?: PostgresTable[], message?: string }> => {
-  try {
-    await simulateLatency();
-    
-    // For simulation, fetch schema information to test connection
-    const schemaParams: SchemaFetchParams = {
-      host: connection.host,
-      port: connection.port,
-      database: connection.database,
-      username: connection.username,
-      password: connection.password,
-    };
-    
-    const schemaResponse = await fetchDatabaseSchema(schemaParams);
-    
-    if (schemaResponse.success) {
-      return {
-        success: true,
-        data: true,
-        tables: schemaResponse.tables || [],
-        message: schemaResponse.message
-      };
-    } else {
-      return {
-        success: false,
-        error: schemaResponse.error || 'Failed to retrieve database schema',
-      };
-    }
-  } catch (error) {
-    return handleError(error);
-  }
+  return fetchApi<boolean>('/postgres/connections/test', {
+    method: 'POST',
+    body: JSON.stringify(connection),
+  });
 };
 
 // CSV Datasets API
 export const fetchCsvDatasets = async (): Promise<ApiResponse<CsvDataset[]>> => {
-  try {
-    await simulateLatency();
-    const datasets = getCsvDatasets();
-    return {
-      success: true,
-      data: datasets,
-    };
-  } catch (error) {
-    return handleError(error);
-  }
+  return fetchApi<CsvDataset[]>('/datasets/csv');
 };
 
 export const uploadCsvFile = async (file: File): Promise<ApiResponse<CsvDataset>> => {
   try {
-    // Parse the CSV file using FileReader
-    const parseCSV = (content: string) => {
-      const lines = content.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^"(.*)"$/, '$1'));
-      
-      const rows = [];
-      for (let i = 1; i < Math.min(lines.length, 4); i++) {
-        if (!lines[i].trim()) continue;
-        
-        const values = lines[i].split(',').map(v => v.trim().replace(/^"(.*)"$/, '$1'));
-        const row = {};
-        headers.forEach((header, index) => {
-          row[header] = values[index] || '';
-        });
-        rows.push(row);
-      }
-      
-      return { headers, rows, rowCount: lines.length - 1 };
-    };
+    await simulateLatency();
     
-    // Read file content
-    const fileContent = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
-      reader.onerror = reject;
-      reader.readAsText(file);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch(`${API_BASE_URL}/datasets/csv/upload`, {
+      method: 'POST',
+      body: formData,
     });
     
-    const { headers, rows, rowCount } = parseCSV(fileContent);
+    const data = await response.json();
     
-    // Create dataset object
-    const newDataset: CsvDataset = {
-      id: `csv_${Date.now()}`,
-      name: file.name.replace('.csv', ''),
-      fileName: file.name,
-      uploadedAt: new Date().toISOString(),
-      columns: headers,
-      rowCount,
-      previewData: rows,
-    };
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error || `Error: ${response.status} ${response.statusText}`,
+      };
+    }
     
-    // Store in localStorage
-    storeCsvDataset(newDataset);
-    
-    return {
-      success: true,
-      data: newDataset,
-    };
+    return data;
   } catch (error) {
     return handleError(error);
   }
@@ -266,207 +152,43 @@ export const uploadCsvFile = async (file: File): Promise<ApiResponse<CsvDataset>
 
 // Validation API
 export const fetchValidationChecks = async (): Promise<ApiResponse<ValidationCheck[]>> => {
-  try {
-    await simulateLatency();
-    const checks = getValidationChecks();
-    return {
-      success: true,
-      data: checks,
-    };
-  } catch (error) {
-    return handleError(error);
-  }
+  return fetchApi<ValidationCheck[]>('/validation/checks');
 };
 
 export const createValidationCheck = async (check: Omit<ValidationCheck, 'id' | 'createdAt'>): Promise<ApiResponse<ValidationCheck>> => {
-  try {
-    await simulateLatency();
-    const newCheck: ValidationCheck = {
-      ...check,
-      id: `check_${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    
-    // Store in localStorage
-    storeValidationCheck(newCheck);
-    
-    return {
-      success: true,
-      data: newCheck,
-    };
-  } catch (error) {
-    return handleError(error);
-  }
+  return fetchApi<ValidationCheck>('/validation/checks', {
+    method: 'POST',
+    body: JSON.stringify(check),
+  });
 };
 
 export const runValidation = async (checkId: string): Promise<ApiResponse<ValidationResult>> => {
   try {
-    await simulateLatency();
+    // Start the validation in the background
+    const startResponse = await fetchApi<any>(`/validation/run/${checkId}`, {
+      method: 'POST',
+    });
     
-    // Find the check in our stored data
-    const checks = getValidationChecks();
-    const check = checks.find(c => c.id === checkId);
-    if (!check) {
-      throw new Error('Validation check not found');
+    if (!startResponse.success) {
+      return startResponse;
     }
     
-    // Get the dataset
-    let dataset;
-    if (check.dataset.type === 'csv') {
-      const csvDatasets = getCsvDatasets();
-      dataset = csvDatasets.find(d => d.id === check.dataset.id);
-    } else {
-      const pgConnections = getPostgresConnections();
-      dataset = pgConnections.find(c => c.id === check.dataset.id);
-      console.log("Running validation on PostgreSQL dataset:", dataset);
+    // Get the latest validation results
+    const resultsResponse = await fetchApi<ValidationResult[]>('/validation/results');
+    
+    if (!resultsResponse.success || !resultsResponse.data) {
+      return resultsResponse;
     }
     
-    if (!dataset) {
-      throw new Error('Dataset not found');
+    // Find the result for this check
+    const result = resultsResponse.data.find(r => r.checkId === checkId);
+    
+    if (!result) {
+      return {
+        success: false,
+        error: 'Validation result not found',
+      };
     }
-    
-    // Run the appropriate validation based on check type
-    let passed = false;
-    let failedCount = 0;
-    let errorMessage = '';
-    
-    // Simulate running validation with more realistic behavior
-    const totalRows = check.dataset.type === 'csv' 
-      ? (dataset as CsvDataset).rowCount 
-      : Math.floor(Math.random() * 10000) + 100;
-    
-    switch (check.type) {
-      case 'missing_values':
-        // For missing values check, we'll simulate finding some nulls in PostgreSQL
-        if (check.dataset.type === 'postgres') {
-          const missingPercentage = Math.random() * 5; // Random 0-5% missing
-          failedCount = Math.floor((totalRows * missingPercentage) / 100);
-          passed = failedCount <= (check.parameters.threshold || 0) * totalRows / 100;
-        } else {
-          // For CSV, use a similar approach
-          const csvDataset = dataset as CsvDataset;
-          const columnIndex = csvDataset.columns.indexOf(check.column || '');
-          if (columnIndex >= 0) {
-            // Count empty values in preview data
-            const emptyCount = csvDataset.previewData.filter(
-              row => !row[check.column || '']
-            ).length;
-            failedCount = Math.floor((totalRows * emptyCount) / csvDataset.previewData.length);
-            passed = failedCount <= (check.parameters.threshold || 0) * totalRows / 100;
-          }
-        }
-        break;
-        
-      case 'unique_values':
-        // For uniqueness, simulate some duplicates
-        if (check.dataset.type === 'postgres') {
-          // Simulate finding a small number of duplicates
-          failedCount = Math.floor(Math.random() * 10);
-          passed = failedCount === 0;
-        } else {
-          // For CSV data, check preview data for duplicates
-          const csvDataset = dataset as CsvDataset;
-          const values = csvDataset.previewData.map(row => row[check.column || '']);
-          const uniqueValues = new Set(values);
-          failedCount = values.length - uniqueValues.size;
-          // Scale to full dataset
-          failedCount = Math.floor((totalRows * failedCount) / csvDataset.previewData.length);
-          passed = failedCount === 0;
-        }
-        break;
-        
-      case 'valid_values':
-        // For valid values, check against the allowed list
-        const allowedValues = check.parameters.values || [];
-        if (check.dataset.type === 'postgres') {
-          // Simulate finding values outside the allowed list
-          failedCount = Math.floor(Math.random() * totalRows * 0.02); // Up to 2% invalid
-          passed = failedCount === 0;
-        } else {
-          // For CSV, check preview data against allowed values
-          const csvDataset = dataset as CsvDataset;
-          const invalidCount = csvDataset.previewData.filter(
-            row => !allowedValues.includes(row[check.column || ''])
-          ).length;
-          failedCount = Math.floor((totalRows * invalidCount) / csvDataset.previewData.length);
-          passed = failedCount === 0;
-        }
-        break;
-        
-      // ... Add more specific validations for other check types
-        
-      default:
-        // For other validations, use a more realistic pass rate based on check type
-        passed = Math.random() > 0.2; // 80% pass rate for other checks
-        failedCount = passed ? 0 : Math.floor(Math.random() * totalRows * 0.05); // Up to 5% failures
-    }
-    
-    // Generate some sample failed rows for display in results
-    const failedRows = [];
-    if (failedCount > 0) {
-      // Create some sample failed rows
-      const pgTable = check.dataset.type === 'postgres' && check.table 
-        ? (dataset as PostgresConnection).tables?.find(t => t.name === check.table)
-        : null;
-        
-      if (pgTable) {
-        // Create sample rows based on the PostgreSQL table schema
-        for (let i = 0; i < Math.min(failedCount, 10); i++) {
-          const row: Record<string, any> = {};
-          pgTable.columns.forEach(col => {
-            // Generate sample data for each column
-            switch (col.dataType) {
-              case 'uuid':
-                row[col.name] = `mock-uuid-${i}-${Math.floor(Math.random() * 1000)}`;
-                break;
-              case 'varchar':
-              case 'text':
-                row[col.name] = col.name === check.column 
-                  ? (check.type === 'valid_values' ? 'INVALID_VALUE' : `Sample ${col.name} ${i}`)
-                  : `Sample ${col.name} ${i}`;
-                break;
-              case 'numeric':
-              case 'integer':
-                row[col.name] = Math.floor(Math.random() * 1000);
-                break;
-              case 'boolean':
-                row[col.name] = Math.random() > 0.5;
-                break;
-              case 'date':
-              case 'timestamp':
-                row[col.name] = new Date().toISOString();
-                break;
-              default:
-                row[col.name] = `Sample ${col.name} ${i}`;
-            }
-          });
-          row._reason = `Failed ${check.type} validation`;
-          failedRows.push(row);
-        }
-      }
-    }
-    
-    const result: ValidationResult = {
-      id: `result_${Date.now()}`,
-      checkId,
-      checkName: check.name,
-      dataset: check.dataset,
-      table: check.table,
-      column: check.column,
-      status: passed ? 'passed' : 'failed',
-      metrics: {
-        rowCount: totalRows,
-        executionTimeMs: Math.floor(Math.random() * 2000) + 200,
-        passedCount: totalRows - failedCount,
-        failedCount,
-      },
-      createdAt: new Date().toISOString(),
-      errorMessage,
-      failedRows: failedRows.length > 0 ? failedRows : undefined,
-    };
-    
-    // Store the result
-    storeValidationResult(result);
     
     return {
       success: true,
@@ -478,14 +200,5 @@ export const runValidation = async (checkId: string): Promise<ApiResponse<Valida
 };
 
 export const fetchValidationResults = async (): Promise<ApiResponse<ValidationResult[]>> => {
-  try {
-    await simulateLatency();
-    const results = getValidationResults();
-    return {
-      success: true,
-      data: results,
-    };
-  } catch (error) {
-    return handleError(error);
-  }
+  return fetchApi<ValidationResult[]>('/validation/results');
 };
