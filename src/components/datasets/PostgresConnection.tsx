@@ -217,7 +217,7 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Alert variant="info" className="mb-6">
+        <Alert variant="default" className="mb-6">
           <Info className="h-4 w-4" />
           <AlertTitle>Demo Mode</AlertTitle>
           <AlertDescription>
