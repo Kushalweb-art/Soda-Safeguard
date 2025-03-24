@@ -217,16 +217,6 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Alert variant="default" className="mb-6">
-          <Info className="h-4 w-4" />
-          <AlertTitle>Demo Mode</AlertTitle>
-          <AlertDescription>
-            This is a frontend-only demo. No actual database connections are being made.
-            In a real application, these requests would be sent to a backend server that handles
-            the PostgreSQL connections securely. Try using "wrong" as username or password to see error handling.
-          </AlertDescription>
-        </Alert>
-
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -325,9 +315,6 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
                         />
                       </div>
                     </FormControl>
-                    <FormDescription>
-                      Use "wrong" to simulate authentication failure
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -349,9 +336,6 @@ const PostgresConnectionForm: React.FC<PostgresConnectionFormProps> = ({ onConne
                         />
                       </div>
                     </FormControl>
-                    <FormDescription>
-                      Use "wrong" to simulate authentication failure
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
