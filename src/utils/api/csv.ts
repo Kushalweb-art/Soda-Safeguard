@@ -21,14 +21,28 @@ export const uploadCsvFile = async (file: File): Promise<ApiResponse<CsvDataset>
     const response = await fetch(url, {
       method: 'POST',
       body: formData,
+      // Adding these headers explicitly to ensure proper CORS handling
+      headers: {
+        'Accept': 'application/json',
+        // Don't set Content-Type with FormData as the browser will set it with the boundary
+      },
+      // Include credentials if your API requires them
+      credentials: 'include',
     });
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error(`Upload error (${response.status}): ${errorData.error || response.statusText}`);
+      let errorMessage = `Upload error (${response.status}): ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        console.error('Could not parse error response:', e);
+      }
+      
+      console.error(errorMessage);
       return {
         success: false,
-        error: errorData.error || `Error: ${response.status} ${response.statusText}`,
+        error: errorMessage,
       };
     }
     
