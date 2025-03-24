@@ -16,12 +16,15 @@ export const createValidationCheck = async (check: Omit<ValidationCheck, 'id' | 
 export const runValidation = async (checkId: string): Promise<ApiResponse<ValidationResult>> => {
   try {
     // Start the validation in the background
-    const startResponse = await fetchApi<any>(`/validation/run/${checkId}`, {
+    const startResponse = await fetchApi<unknown>(`/validation/run/${checkId}`, {
       method: 'POST',
     });
     
     if (!startResponse.success) {
-      return startResponse;
+      return {
+        success: false,
+        error: 'Unexpected response type from validation start API',
+      };
     }
     
     // Get the latest validation results

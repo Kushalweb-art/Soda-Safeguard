@@ -14,8 +14,8 @@ export const simulateLatency = async () => {
 };
 
 // Function to handle API errors consistently
-export const handleError = (error: any): ApiResponse<never> => {
-  const errorMessage = error?.message || 'An unexpected error occurred';
+export const handleError = (error: unknown): ApiResponse<never> => {
+  const errorMessage = (error instanceof Error ? error.message : 'An unexpected error occurred');
   console.error('API Error:', error);
   toast({
     title: 'Error',

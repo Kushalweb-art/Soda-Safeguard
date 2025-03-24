@@ -30,7 +30,7 @@ export interface CsvDataset {
   uploadedAt: string;
   columns: string[];
   rowCount: number;
-  previewData: any[];
+  previewData: unknown[];
 }
 
 export type Dataset = PostgresConnection | CsvDataset;
@@ -56,7 +56,7 @@ export interface ValidationCheck {
   };
   table?: string;
   column?: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   createdAt: string;
 }
 
@@ -79,7 +79,7 @@ export interface ValidationResult {
     erroredCount?: number;
     executionTimeMs?: number;
   };
-  failedRows?: any[];
+  failedRows?: unknown[];
   errorMessage?: string;
   createdAt: string;
 }
@@ -103,7 +103,7 @@ export interface ApiSchemaResponse {
 // Component Props
 export interface SidebarLinkProps {
   to: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<unknown>;
   label: string;
   active: boolean;
 }

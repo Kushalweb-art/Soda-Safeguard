@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Database URL configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data_validator.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:1234@localhost:5432/saved")
 
 # Create SQLAlchemy engine
 engine = create_engine(DATABASE_URL)
