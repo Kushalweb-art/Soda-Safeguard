@@ -2,7 +2,7 @@
 import { ApiResponse } from '@/types';
 import { toast } from '@/hooks/use-toast';
 
-// API base URL
+// API base URL - ensure this matches your backend server
 export const API_BASE_URL = 'http://localhost:8000/api';
 
 // Helper function to simulate API latency in development for smoother UX
@@ -28,7 +28,7 @@ export const handleError = (error: any): ApiResponse<never> => {
   };
 };
 
-// Generic fetch function
+// Generic fetch function with improved error handling
 export const fetchApi = async <T>(
   endpoint: string, 
   options: RequestInit = {}
@@ -36,7 +36,10 @@ export const fetchApi = async <T>(
   try {
     await simulateLatency();
     
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = `${API_BASE_URL}${endpoint}`;
+    console.log(`Making API request to: ${url}`);
+    
+    const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -46,6 +49,7 @@ export const fetchApi = async <T>(
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error(`API error (${response.status}): ${errorData.error || response.statusText}`);
       return {
         success: false,
         error: errorData.error || `Error: ${response.status} ${response.statusText}`,
@@ -53,9 +57,11 @@ export const fetchApi = async <T>(
     }
     
     const data = await response.json();
+    console.log(`API response from ${endpoint}:`, data);
     
     return data;
   } catch (error) {
+    console.error(`API call to ${endpoint} failed:`, error);
     return handleError(error);
   }
 };
