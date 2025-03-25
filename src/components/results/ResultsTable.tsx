@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -44,10 +43,12 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ results }) => {
     setSelectedResult(result);
   };
   
-  const renderStatusIcon = (status: 'passed' | 'failed' | 'error') => {
+  const renderStatusIcon = (status: 'passed' | 'warning' | 'failed' | 'error') => {
     switch (status) {
       case 'passed':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'warning':
+        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
       case 'failed':
         return <XCircle className="h-5 w-5 text-red-500" />;
       case 'error':
@@ -61,11 +62,23 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ results }) => {
       : <FileSpreadsheet className="h-4 w-4 mr-1 text-green-500" />;
   };
   
+  const getStatusColor = (status: 'passed' | 'warning' | 'failed' | 'error') => {
+    switch (status) {
+      case 'passed':
+        return 'bg-green-100 text-green-800 hover:bg-green-100';
+      case 'warning':
+        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100';
+      case 'failed':
+        return 'bg-red-100 text-red-800 hover:bg-red-100';
+      case 'error':
+        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100';
+    }
+  };
+  
   const renderFailedRowsTable = () => {
     if (!selectedResult || !selectedResult.failedRows || selectedResult.failedRows.length === 0) return null;
     
     const firstRow = selectedResult.failedRows[0];
-    // Filter out internal properties like _reason
     const keys = Object.keys(firstRow).filter(key => !key.startsWith('_'));
     
     return (
@@ -240,9 +253,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ results }) => {
                     variant="outline"
                     className={`
                       flex items-center gap-1 px-3 py-1
-                      ${selectedResult.status === 'passed' ? 'bg-green-100 text-green-800 hover:bg-green-100' : 
-                        selectedResult.status === 'failed' ? 'bg-red-100 text-red-800 hover:bg-red-100' :
-                        'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'}
+                      ${getStatusColor(selectedResult.status)}
                     `}
                   >
                     {renderStatusIcon(selectedResult.status)}
@@ -277,7 +288,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ results }) => {
                   </Card>
                 </div>
                 
-                {selectedResult.status === 'failed' && renderFailedRowsTable()}
+                {(selectedResult.status === 'failed' || selectedResult.status === 'warning') && renderFailedRowsTable()}
                 
                 {selectedResult.status === 'error' && selectedResult.errorMessage && (
                   <div>

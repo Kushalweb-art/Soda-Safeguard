@@ -1,122 +1,5 @@
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
-import uuid
-from datetime import datetime
-import psycopg2
-import pandas as pd
-import json
-
-from app.database import get_db
-from app.models.validation import ValidationCheck, ValidationResult
-from app.models.postgres import PostgresConnection
-from app.models.dataset import CsvDataset
-from app.schemas.validation import (
-    ValidationCheckCreate,
-    ValidationCheckResponse,
-    ValidationResultResponse,
-    ApiResponse,
-    ValidationStatus
-)
-
-router = APIRouter()
-
-@router.get("/checks", response_model=ApiResponse)
-async def get_all_checks(db: Session = Depends(get_db)):
-    """Get all validation checks"""
-    checks = db.query(ValidationCheck).order_by(ValidationCheck.created_at.desc()).all()
-    return {
-        "success": True,
-        "data": [check.to_dict() for check in checks]
-    }
-
-@router.get("/checks/{check_id}", response_model=ApiResponse)
-async def get_check_by_id(check_id: str, db: Session = Depends(get_db)):
-    """Get a validation check by ID"""
-    check = db.query(ValidationCheck).filter(ValidationCheck.id == check_id).first()
-    if not check:
-        return {
-            "success": False,
-            "error": "Validation check not found"
-        }
-    
-    return {
-        "success": True,
-        "data": check.to_dict()
-    }
-
-@router.post("/checks", response_model=ApiResponse)
-async def create_check(check: ValidationCheckCreate, db: Session = Depends(get_db)):
-    """Create a new validation check"""
-    # Create new check object
-    new_check = ValidationCheck(
-        id=f"check_{uuid.uuid4()}",
-        name=check.name,
-        type=check.type,
-        dataset=check.dataset.dict(),
-        table=check.table,
-        column=check.column,
-        parameters=check.parameters,
-        created_at=datetime.now()
-    )
-    
-    # Save to database
-    db.add(new_check)
-    db.commit()
-    db.refresh(new_check)
-    
-    return {
-        "success": True,
-        "data": new_check.to_dict()
-    }
-
-@router.get("/results", response_model=ApiResponse)
-async def get_all_results(db: Session = Depends(get_db)):
-    """Get all validation results"""
-    results = db.query(ValidationResult).order_by(ValidationResult.created_at.desc()).all()
-    return {
-        "success": True,
-        "data": [result.to_dict() for result in results]
-    }
-
-@router.get("/results/{result_id}", response_model=ApiResponse)
-async def get_result_by_id(result_id: str, db: Session = Depends(get_db)):
-    """Get a validation result by ID"""
-    result = db.query(ValidationResult).filter(ValidationResult.id == result_id).first()
-    if not result:
-        return {
-            "success": False,
-            "error": "Validation result not found"
-        }
-    
-    return {
-        "success": True,
-        "data": result.to_dict()
-    }
-
-@router.post("/run/{check_id}", response_model=ApiResponse)
-async def run_validation(check_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """Run a validation check"""
-    # Get the check from the database
-    check = db.query(ValidationCheck).filter(ValidationCheck.id == check_id).first()
-    if not check:
-        return {
-            "success": False,
-            "error": "Validation check not found"
-        }
-    
-    # Run the validation in the background
-    background_tasks.add_task(
-        run_validation_task,
-        db_session=db,
-        check=check
-    )
-    
-    return {
-        "success": True,
-        "message": "Validation started in the background"
-    }
+# ... keep existing code (imports and first few functions)
 
 async def run_validation_task(db_session: Session, check: ValidationCheck):
     """Run a validation check in the background"""
@@ -184,7 +67,7 @@ async def run_postgres_validation(db_session: Session, check: ValidationCheck) -
     # Initialize variables
     start_time = datetime.now()
     failed_rows = []
-    passed = False
+    status = "passed"
     
     try:
         # Run validation based on check type
@@ -196,10 +79,22 @@ async def run_postgres_validation(db_session: Session, check: ValidationCheck) -
             cursor.execute(f'SELECT COUNT(*) FROM "{check.table}" WHERE "{check.column}" IS NULL OR TRIM("{check.column}"::TEXT) = \'\'')
             missing_count = cursor.fetchone()[0]
             
-            threshold = (check.parameters.get("threshold", 0) * total_rows) / 100
-            passed = missing_count <= threshold
+            # Get threshold settings
+            warning_threshold = check.parameters.get("warningThreshold", 5)  # Default 5%
+            failure_threshold = check.parameters.get("threshold", 10)  # Default 10%
             
-            if not passed:
+            # Calculate actual percentage
+            missing_percentage = (missing_count * 100) / total_rows if total_rows > 0 else 0
+            
+            # Determine status based on thresholds
+            if missing_percentage > failure_threshold:
+                status = "failed"
+            elif missing_percentage > warning_threshold:
+                status = "warning"
+            else:
+                status = "passed"
+            
+            if status != "passed":
                 # Get examples of rows with missing values
                 cursor.execute(f'''
                     SELECT * FROM "{check.table}" 
@@ -222,7 +117,7 @@ async def run_postgres_validation(db_session: Session, check: ValidationCheck) -
                 "dataset": check.dataset,
                 "table": check.table,
                 "column": check.column,
-                "status": "passed" if passed else "failed",
+                "status": status,
                 "metrics": {
                     "rowCount": total_rows,
                     "executionTimeMs": execution_time,
@@ -240,10 +135,24 @@ async def run_postgres_validation(db_session: Session, check: ValidationCheck) -
             cursor.execute(f'SELECT "{check.column}", COUNT(*) FROM "{check.table}" GROUP BY "{check.column}" HAVING COUNT(*) > 1')
             duplicates = cursor.fetchall()
             
-            passed = len(duplicates) == 0
             duplicate_count = sum(count - 1 for _, count in duplicates)
             
-            if not passed:
+            # Get threshold settings
+            warning_threshold = check.parameters.get("warningThreshold", 1)  # Default 1%
+            failure_threshold = check.parameters.get("threshold", 5)  # Default 5%
+            
+            # Calculate actual percentage
+            duplicate_percentage = (duplicate_count * 100) / total_rows if total_rows > 0 else 0
+            
+            # Determine status based on thresholds
+            if duplicate_percentage > failure_threshold:
+                status = "failed"
+            elif duplicate_percentage > warning_threshold:
+                status = "warning"
+            else:
+                status = "passed"
+            
+            if status != "passed":
                 # Get examples of duplicated values
                 for dup_value, _ in duplicates[:5]:
                     cursor.execute(f'SELECT * FROM "{check.table}" WHERE "{check.column}" = %s LIMIT 10', (dup_value,))
@@ -263,7 +172,7 @@ async def run_postgres_validation(db_session: Session, check: ValidationCheck) -
                 "dataset": check.dataset,
                 "table": check.table,
                 "column": check.column,
-                "status": "passed" if passed else "failed",
+                "status": status,
                 "metrics": {
                     "rowCount": total_rows,
                     "executionTimeMs": execution_time,
@@ -295,7 +204,7 @@ async def run_csv_validation(db_session: Session, check: ValidationCheck) -> Dic
     # Initialize metrics
     start_time = datetime.now()
     failed_rows = []
-    passed = False
+    status = "passed"
     
     # Run validation based on check type
     if check.type == "missing_values":
@@ -304,8 +213,20 @@ async def run_csv_validation(db_session: Session, check: ValidationCheck) -> Dic
         # Extrapolate to the full dataset
         estimated_missing = int((dataset.row_count * missing_in_preview) / len(preview_data)) if len(preview_data) > 0 else 0
         
-        threshold = (check.parameters.get("threshold", 0) * dataset.row_count) / 100
-        passed = estimated_missing <= threshold
+        # Get threshold settings
+        warning_threshold = check.parameters.get("warningThreshold", 5)  # Default 5%
+        failure_threshold = check.parameters.get("threshold", 10)  # Default 10%
+        
+        # Calculate actual percentage
+        missing_percentage = (estimated_missing * 100) / dataset.row_count if dataset.row_count > 0 else 0
+        
+        # Determine status based on thresholds
+        if missing_percentage > failure_threshold:
+            status = "failed"
+        elif missing_percentage > warning_threshold:
+            status = "warning"
+        else:
+            status = "passed"
         
         # Get examples of rows with missing values
         for row in preview_data:
@@ -322,7 +243,7 @@ async def run_csv_validation(db_session: Session, check: ValidationCheck) -> Dic
             "checkName": check.name,
             "dataset": check.dataset,
             "column": check.column,
-            "status": "passed" if passed else "failed",
+            "status": status,
             "metrics": {
                 "rowCount": dataset.row_count,
                 "executionTimeMs": execution_time,
@@ -336,3 +257,5 @@ async def run_csv_validation(db_session: Session, check: ValidationCheck) -> Dic
     
     else:
         raise ValueError(f"Unsupported validation type: {check.type}")
+
+# ... keep existing code (remaining functions)
