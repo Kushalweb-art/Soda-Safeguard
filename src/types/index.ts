@@ -83,7 +83,11 @@ export interface ValidationResult {
     erroredCount?: number;
     executionTimeMs?: number;
   };
+<<<<<<< HEAD
   failedRows?: unknown[];
+=======
+  failedRows?: FailedRow[];
+>>>>>>> ca594e89b68552f110d042c48698e023464913f4
   errorMessage?: string;
   createdAt: string;
 }
