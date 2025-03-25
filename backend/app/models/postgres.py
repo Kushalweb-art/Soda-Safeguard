@@ -1,7 +1,6 @@
 
-from sqlalchemy import Column, String, Integer, DateTime, Text
+from sqlalchemy import Column, String, Integer, DateTime, JSON
 from sqlalchemy.sql import func
-import json
 from app.database import Base
 
 class PostgresConnection(Base):
@@ -15,7 +14,7 @@ class PostgresConnection(Base):
     username = Column(String, nullable=False)
     password = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), default=func.now())
-    tables = Column(Text, nullable=False, default='[]')
+    tables = Column(JSON, nullable=False, default=[])
     
     def to_dict(self):
         return {
@@ -27,5 +26,5 @@ class PostgresConnection(Base):
             "username": self.username,
             "password": self.password,
             "createdAt": self.created_at.isoformat(),
-            "tables": json.loads(self.tables)
+            "tables": self.tables
         }

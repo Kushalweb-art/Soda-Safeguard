@@ -45,7 +45,6 @@ class ValidationMetrics(BaseModel):
 
 class ValidationStatus(str, Enum):
     passed = "passed"
-    warning = "warning"
     failed = "failed"
     error = "error"
 

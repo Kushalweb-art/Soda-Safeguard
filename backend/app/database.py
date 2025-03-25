@@ -9,19 +9,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Database URL configuration
-<<<<<<< HEAD
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:1234@localhost:5432/saved")
-=======
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data_validator.db")
->>>>>>> parent of feb6416 (Refactor: Use PostgreSQL for database)
 
-# Create SQLAlchemy engine 
-# Connect args needed for SQLite
-connect_args = {}
-if DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
-
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+# Create SQLAlchemy engine
+engine = create_engine(DATABASE_URL)
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
