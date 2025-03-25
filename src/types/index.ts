@@ -71,7 +71,7 @@ export interface ValidationResult {
   };
   table?: string;
   column?: string;
-  status: 'passed' | 'failed' | 'error';
+  status: 'passed' | 'warning' | 'failed' | 'error';
   metrics: {
     rowCount?: number;
     passedCount?: number;
