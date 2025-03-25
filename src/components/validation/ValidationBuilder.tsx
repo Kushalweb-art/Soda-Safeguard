@@ -141,7 +141,7 @@ const ValidationBuilder: React.FC<ValidationBuilderProps> = ({
   
   const handleCheckTypeChange = (type: ValidationCheckType) => {
     setSelectedCheckType(type);
-    form.setValue('type', type);  // Set the type without using 'any'
+    form.setValue('type', type as any);  // Type assertion to handle the type issue
     
     let defaultParams = {};
     switch (type) {

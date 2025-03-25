@@ -1,3 +1,4 @@
+
 // Dataset Types
 export interface PostgresConnection {
   id: string;
@@ -29,7 +30,7 @@ export interface CsvDataset {
   uploadedAt: string;
   columns: string[];
   rowCount: number;
-  previewData: unknown[];
+  previewData: any[];
 }
 
 export type Dataset = PostgresConnection | CsvDataset;
@@ -55,13 +56,8 @@ export interface ValidationCheck {
   };
   table?: string;
   column?: string;
-  parameters: Record<string, unknown>;
+  parameters: Record<string, any>;
   createdAt: string;
-}
-
-export interface FailedRow {
-  [key: string]: unknown;
-  _reason?: string;
 }
 
 export interface ValidationResult {
@@ -75,7 +71,7 @@ export interface ValidationResult {
   };
   table?: string;
   column?: string;
-  status: 'passed' | 'warning' | 'failed' | 'error';
+  status: 'passed' | 'failed' | 'error';
   metrics: {
     rowCount?: number;
     passedCount?: number;
@@ -83,6 +79,9 @@ export interface ValidationResult {
     erroredCount?: number;
     executionTimeMs?: number;
   };
+  failedRows?: any[];
+  errorMessage?: string;
+  createdAt: string;
 }
 
 // Schema fetching types
@@ -104,7 +103,7 @@ export interface ApiSchemaResponse {
 // Component Props
 export interface SidebarLinkProps {
   to: string;
-  icon: React.ComponentType<unknown>;
+  icon: React.ComponentType<any>;
   label: string;
   active: boolean;
 }
