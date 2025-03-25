@@ -3,7 +3,6 @@ from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey
 from sqlalchemy.sql import func
 import json
 from app.database import Base
-from sqlalchemy.orm import Session
 
 class ValidationCheck(Base):
     __tablename__ = "validation_checks"
@@ -11,10 +10,10 @@ class ValidationCheck(Base):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     type = Column(String, nullable=False)
-    dataset = Column(Text, nullable=False)  # JSON string
+    dataset = Column(Text, nullable=False)
     table = Column(String, nullable=True)
     column = Column(String, nullable=True)
-    parameters = Column(Text, nullable=False)  # JSON string
+    parameters = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=func.now())
     
     def to_dict(self):
@@ -26,7 +25,7 @@ class ValidationCheck(Base):
             "table": self.table,
             "column": self.column,
             "parameters": json.loads(self.parameters),
-            "createdAt": self.created_at.isoformat() if self.created_at else None
+            "createdAt": self.created_at.isoformat()
         }
 
 class ValidationResult(Base):
@@ -35,12 +34,12 @@ class ValidationResult(Base):
     id = Column(String, primary_key=True)
     check_id = Column(String, nullable=False)
     check_name = Column(String, nullable=False)
-    dataset = Column(Text, nullable=False)  # JSON string
+    dataset = Column(Text, nullable=False)
     table = Column(String, nullable=True)
     column = Column(String, nullable=True)
     status = Column(String, nullable=False)
-    metrics = Column(Text, nullable=False)  # JSON string
-    failed_rows = Column(Text, nullable=True)  # JSON string
+    metrics = Column(Text, nullable=False)
+    failed_rows = Column(Text, nullable=True)
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=func.now())
     
@@ -56,5 +55,5 @@ class ValidationResult(Base):
             "metrics": json.loads(self.metrics),
             "failedRows": json.loads(self.failed_rows) if self.failed_rows else None,
             "errorMessage": self.error_message,
-            "createdAt": self.created_at.isoformat() if self.created_at else None
+            "createdAt": self.created_at.isoformat()
         }
