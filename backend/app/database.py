@@ -9,7 +9,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Database URL configuration
+<<<<<<< HEAD
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:1234@localhost:5432/saved")
+=======
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data_validator.db")
+>>>>>>> parent of feb6416 (Refactor: Use PostgreSQL for database)
 
 # Create SQLAlchemy engine 
 # Connect args needed for SQLite
