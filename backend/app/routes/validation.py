@@ -1,5 +1,15 @@
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
+from sqlalchemy.orm import Session
+import uuid
+from datetime import datetime
+import psycopg2
+from typing import Dict, Any, List
+from pydantic import BaseModel
 
-# ... keep existing code (imports and first few functions)
+from app.database import get_db
+from app.models.validation import ValidationCheck, ValidationResult
+from app.models.postgres import PostgresConnection
+from app.models.dataset import CsvDataset
 
 async def run_validation_task(db_session: Session, check: ValidationCheck):
     """Run a validation check in the background"""
@@ -257,5 +267,3 @@ async def run_csv_validation(db_session: Session, check: ValidationCheck) -> Dic
     
     else:
         raise ValueError(f"Unsupported validation type: {check.type}")
-
-# ... keep existing code (remaining functions)
