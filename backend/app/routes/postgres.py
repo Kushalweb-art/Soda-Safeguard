@@ -44,7 +44,7 @@ async def create_connection(connection: PostgresConnectionCreate, db: Session = 
     if not test_result["success"]:
         return test_result
     
-    # Convert tables to JSON string for SQLite storage
+    # Convert tables to JSON string for storage
     tables_json = json.dumps(test_result.get("tables", []))
     
     # Create new connection with the tables from the test
