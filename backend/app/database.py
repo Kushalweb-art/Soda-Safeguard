@@ -9,10 +9,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Database URL configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:1234@localhost:5432/saved")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data_validator.db")
 
-# Create SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
+# Create SQLAlchemy engine 
+# Connect args needed for SQLite
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
