@@ -193,7 +193,7 @@ async def run_postgres_validation(db_session: Session, check: ValidationCheck) -
             cursor.execute(f'SELECT COUNT(*) FROM "{check.table}"')
             total_rows = cursor.fetchone()[0]
             
-            cursor.execute(f'SELECT COUNT(*) FROM "{check.table}" WHERE "{check.column}" IS NULL OR TRIM("{check.column}"::TEXT) = \'\'')
+            cursor.execute(f'SELECT COUNT(*) FROM "{check.table}" WHERE "{check.column}" IS NULL OR "{check.column}" = \'\'')
             missing_count = cursor.fetchone()[0]
             
             threshold = (check.parameters.get("threshold", 0) * total_rows) / 100
@@ -201,11 +201,7 @@ async def run_postgres_validation(db_session: Session, check: ValidationCheck) -
             
             if not passed:
                 # Get examples of rows with missing values
-                cursor.execute(f'''
-                    SELECT * FROM "{check.table}" 
-                    WHERE NULLIF(TRIM("{check.column}"::TEXT), '') IS NULL 
-                    LIMIT 10
-                ''')
+                cursor.execute(f'SELECT * FROM "{check.table}" WHERE "{check.column}" IS NULL OR "{check.column}" = \'\' LIMIT 10')
                 columns = [desc[0] for desc in cursor.description]
                 
                 for row in cursor.fetchall():
