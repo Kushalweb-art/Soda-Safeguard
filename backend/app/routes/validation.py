@@ -10,6 +10,10 @@ from app.database import get_db
 from app.models.validation import ValidationCheck, ValidationResult
 from app.models.postgres import PostgresConnection
 from app.models.dataset import CsvDataset
+from app.schemas.validation import ValidationCheckCreate, ValidationCheckResponse, ValidationResultResponse, ApiResponse
+
+# Create the router
+router = APIRouter()
 
 async def run_validation_task(db_session: Session, check: ValidationCheck):
     """Run a validation check in the background"""
@@ -267,3 +271,150 @@ async def run_csv_validation(db_session: Session, check: ValidationCheck) -> Dic
     
     else:
         raise ValueError(f"Unsupported validation type: {check.type}")
+
+@router.post("/checks", response_model=ApiResponse, status_code=status.HTTP_201_CREATED)
+async def create_validation_check(check: ValidationCheckCreate, db: Session = Depends(get_db)):
+    """Create a new validation check"""
+    try:
+        # Create a new validation check
+        new_check = ValidationCheck(
+            id=f"check_{uuid.uuid4()}",
+            name=check.name,
+            type=check.type,
+            dataset=check.dataset.dict(),
+            table=check.table,
+            column=check.column,
+            parameters=check.parameters,
+            created_at=datetime.now()
+        )
+        
+        db.add(new_check)
+        db.commit()
+        db.refresh(new_check)
+        
+        return {
+            "success": True,
+            "data": new_check.to_dict()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@router.get("/checks", response_model=ApiResponse)
+async def get_validation_checks(db: Session = Depends(get_db)):
+    """Get all validation checks"""
+    try:
+        checks = db.query(ValidationCheck).order_by(ValidationCheck.created_at.desc()).all()
+        return {
+            "success": True,
+            "data": [check.to_dict() for check in checks]
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@router.get("/checks/{check_id}", response_model=ApiResponse)
+async def get_validation_check(check_id: str, db: Session = Depends(get_db)):
+    """Get a validation check by ID"""
+    try:
+        check = db.query(ValidationCheck).filter(ValidationCheck.id == check_id).first()
+        if not check:
+            return {
+                "success": False,
+                "error": "Validation check not found"
+            }
+        
+        return {
+            "success": True,
+            "data": check.to_dict()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@router.post("/checks/{check_id}/run", response_model=ApiResponse)
+async def run_validation_check(
+    check_id: str, 
+    background_tasks: BackgroundTasks, 
+    db: Session = Depends(get_db)
+):
+    """Run a validation check"""
+    try:
+        check = db.query(ValidationCheck).filter(ValidationCheck.id == check_id).first()
+        if not check:
+            return {
+                "success": False,
+                "error": "Validation check not found"
+            }
+        
+        # Run the validation in the background
+        background_tasks.add_task(run_validation_task, db, check)
+        
+        return {
+            "success": True,
+            "data": {
+                "message": f"Validation check '{check.name}' is running in the background"
+            }
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@router.get("/results", response_model=ApiResponse)
+async def get_validation_results(db: Session = Depends(get_db)):
+    """Get all validation results"""
+    try:
+        results = db.query(ValidationResult).order_by(ValidationResult.created_at.desc()).all()
+        return {
+            "success": True,
+            "data": [result.to_dict() for result in results]
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@router.get("/results/{result_id}", response_model=ApiResponse)
+async def get_validation_result(result_id: str, db: Session = Depends(get_db)):
+    """Get a validation result by ID"""
+    try:
+        result = db.query(ValidationResult).filter(ValidationResult.id == result_id).first()
+        if not result:
+            return {
+                "success": False,
+                "error": "Validation result not found"
+            }
+        
+        return {
+            "success": True,
+            "data": result.to_dict()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@router.get("/checks/{check_id}/results", response_model=ApiResponse)
+async def get_validation_results_by_check(check_id: str, db: Session = Depends(get_db)):
+    """Get validation results for a check"""
+    try:
+        results = db.query(ValidationResult).filter(ValidationResult.check_id == check_id).order_by(ValidationResult.created_at.desc()).all()
+        return {
+            "success": True,
+            "data": [result.to_dict() for result in results]
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
