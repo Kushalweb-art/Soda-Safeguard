@@ -1,4 +1,3 @@
-
 // Dataset Types
 export interface PostgresConnection {
   id: string;
@@ -60,6 +59,11 @@ export interface ValidationCheck {
   createdAt: string;
 }
 
+export interface FailedRow {
+  [key: string]: any;
+  _reason?: string;
+}
+
 export interface ValidationResult {
   id: string;
   checkId: string;
@@ -79,7 +83,7 @@ export interface ValidationResult {
     erroredCount?: number;
     executionTimeMs?: number;
   };
-  failedRows?: any[];
+  failedRows?: unknown[];
   errorMessage?: string;
   createdAt: string;
 }
