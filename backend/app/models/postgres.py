@@ -26,6 +26,6 @@ class PostgresConnection(Base):
             "database": self.database,
             "username": self.username,
             "password": self.password,
-            "createdAt": self.created_at.isoformat(),
+            "createdAt": self.created_at.isoformat() if self.created_at else None,
             "tables": json.loads(self.tables)
         }
