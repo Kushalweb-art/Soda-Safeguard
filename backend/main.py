@@ -36,14 +36,15 @@ if not allowed_origins or allowed_origins[0] == "":
         "http://localhost:5174",  # Another common Vite port
         "http://127.0.0.1:5174",
         "http://localhost:8080",  # Added for current Vite server
-        "http://127.0.0.1:8080"   # Added for current Vite server
+        "http://127.0.0.1:8080",   # Added for current Vite server
+        "*"  # Allow all origins during development
     ]
 
 print(f"Configuring CORS with allowed origins: {allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"],  # Allow all origins during development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -61,8 +62,7 @@ async def root():
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     print(f"Received request: {request.method} {request.url}")
-    origin = request.headers.get('origin')
-    print(f"Headers: Origin: {origin}")
+    print(f"Headers: {request.headers}")
     
     response = await call_next(request)
     print(f"Response status: {response.status_code}")

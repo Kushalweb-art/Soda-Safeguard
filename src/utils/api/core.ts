@@ -3,7 +3,9 @@ import { ApiResponse } from '@/types';
 import { toast } from '@/components/ui/use-toast';
 
 // API base URL - ensure this matches your backend server
-export const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:8000/api' : '/api';
+export const API_BASE_URL = import.meta.env.DEV 
+  ? 'http://localhost:8000/api' 
+  : window.location.origin + '/api';
 
 // Helper function to simulate API latency in development for smoother UX
 export const simulateLatency = async () => {
