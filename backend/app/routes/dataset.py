@@ -43,6 +43,24 @@ async def get_csv_dataset_by_id(dataset_id: str, db: Session = Depends(get_db)):
         "data": dataset.to_dict()
     }
 
+@router.delete("/csv/{dataset_id}", response_model=ApiResponse)
+async def delete_csv_dataset(dataset_id: str, db: Session = Depends(get_db)):
+    """Delete a CSV dataset by ID"""
+    dataset = db.query(CsvDataset).filter(CsvDataset.id == dataset_id).first()
+    if not dataset:
+        return {
+            "success": False,
+            "error": "Dataset not found"
+        }
+    
+    db.delete(dataset)
+    db.commit()
+    
+    return {
+        "success": True,
+        "data": {"message": f"Dataset {dataset_id} deleted successfully"}
+    }
+
 @router.post("/csv/upload", response_model=ApiResponse)
 async def upload_csv_file(
     file: UploadFile = File(...),

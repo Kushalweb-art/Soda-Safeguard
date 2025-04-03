@@ -3,22 +3,88 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CsvDataset, PostgresConnection } from '@/types';
-import { Database, FileSpreadsheet, Calendar, Table, ArrowRight } from 'lucide-react';
+import { Database, FileSpreadsheet, Calendar, Table, ArrowRight, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/components/ui/use-toast';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { deletePostgresConnection } from '@/utils/api/postgres';
+import { deleteCsvDataset } from '@/utils/api/csv';
 
 interface DatasetListProps {
   postgresConnections: PostgresConnection[];
   csvDatasets: CsvDataset[];
+  onDelete?: (id: string, type: 'csv' | 'postgres') => void;
 }
 
-const DatasetList: React.FC<DatasetListProps> = ({ postgresConnections, csvDatasets }) => {
+const DatasetList: React.FC<DatasetListProps> = ({ postgresConnections, csvDatasets, onDelete }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [datasetToDelete, setDatasetToDelete] = React.useState<{id: string, name: string, type: 'csv' | 'postgres'} | null>(null);
   
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'MMM d, yyyy');
+  };
+  
+  const handleDeleteClick = (id: string, name: string, type: 'csv' | 'postgres') => {
+    setDatasetToDelete({ id, name, type });
+    setDeleteDialogOpen(true);
+  };
+  
+  const handleDeleteConfirm = async () => {
+    if (!datasetToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      let response;
+      
+      if (datasetToDelete.type === 'csv') {
+        response = await deleteCsvDataset(datasetToDelete.id);
+      } else {
+        response = await deletePostgresConnection(datasetToDelete.id);
+      }
+      
+      if (response.success) {
+        toast({
+          title: 'Deleted successfully',
+          description: `${datasetToDelete.name} has been removed.`,
+        });
+        
+        if (onDelete) {
+          onDelete(datasetToDelete.id, datasetToDelete.type);
+        }
+      } else {
+        toast({
+          title: 'Error',
+          description: response.error || 'Failed to delete. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDatasetToDelete(null);
+    }
   };
   
   return (
@@ -82,15 +148,26 @@ const DatasetList: React.FC<DatasetListProps> = ({ postgresConnections, csvDatas
                           </div>
                         )}
                         
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-primary mt-3 p-0 h-auto"
-                          onClick={() => navigate(`/validation?datasetId=${connection.id}&type=postgres`)}
-                        >
-                          Validate this data
-                          <ArrowRight className="ml-1 h-3 w-3" />
-                        </Button>
+                        <div className="flex justify-between items-center mt-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-primary p-0 h-auto"
+                            onClick={() => navigate(`/validation?datasetId=${connection.id}&type=postgres`)}
+                          >
+                            Validate this data
+                            <ArrowRight className="ml-1 h-3 w-3" />
+                          </Button>
+                          
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive p-0 h-auto"
+                            onClick={() => handleDeleteClick(connection.id, connection.name, 'postgres')}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -154,15 +231,26 @@ const DatasetList: React.FC<DatasetListProps> = ({ postgresConnections, csvDatas
                           </div>
                         </div>
                         
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-primary mt-3 p-0 h-auto"
-                          onClick={() => navigate(`/validation?datasetId=${dataset.id}&type=csv`)}
-                        >
-                          Validate this data
-                          <ArrowRight className="ml-1 h-3 w-3" />
-                        </Button>
+                        <div className="flex justify-between items-center mt-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-primary p-0 h-auto"
+                            onClick={() => navigate(`/validation?datasetId=${dataset.id}&type=csv`)}
+                          >
+                            Validate this data
+                            <ArrowRight className="ml-1 h-3 w-3" />
+                          </Button>
+                          
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive p-0 h-auto"
+                            onClick={() => handleDeleteClick(dataset.id, dataset.name, 'csv')}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -184,6 +272,30 @@ const DatasetList: React.FC<DatasetListProps> = ({ postgresConnections, csvDatas
           </CardContent>
         </Card>
       )}
+      
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete {datasetToDelete?.name} permanently. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

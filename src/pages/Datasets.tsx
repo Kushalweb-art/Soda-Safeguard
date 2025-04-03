@@ -9,12 +9,14 @@ import DatasetList from '@/components/datasets/DatasetList';
 import { CsvDataset, PostgresConnection } from '@/types';
 import { fetchCsvDatasets, fetchPostgresConnections } from '@/utils/api';
 import PageTransition from '@/components/ui/PageTransition';
+import { useToast } from '@/components/ui/use-toast';
 
 const Datasets = () => {
-  const [activeTab, setActiveTab] = useState<string>('connections');
+  const [activeTab, setActiveTab] = useState<string>('list');
   const [postgresConnections, setPostgresConnections] = useState<PostgresConnection[]>([]);
   const [csvDatasets, setCsvDatasets] = useState<CsvDataset[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
   useEffect(() => {
     loadData();
@@ -23,20 +25,48 @@ const Datasets = () => {
   const loadData = async () => {
     setLoading(true);
     
-    const [connectionsResponse, datasetsResponse] = await Promise.all([
-      fetchPostgresConnections(),
-      fetchCsvDatasets(),
-    ]);
-    
-    if (connectionsResponse.success && connectionsResponse.data) {
-      setPostgresConnections(connectionsResponse.data);
+    try {
+      console.log("Fetching datasets and connections...");
+      
+      // Fetch PostgreSQL connections
+      const connectionsResponse = await fetchPostgresConnections();
+      
+      if (connectionsResponse.success && connectionsResponse.data) {
+        console.log("PostgreSQL connections fetched:", connectionsResponse.data);
+        setPostgresConnections(connectionsResponse.data);
+      } else {
+        console.error("Failed to fetch PostgreSQL connections:", connectionsResponse.error);
+        toast({
+          title: "Error fetching connections",
+          description: connectionsResponse.error || "Could not load PostgreSQL connections",
+          variant: "destructive"
+        });
+      }
+      
+      // Fetch CSV datasets
+      const datasetsResponse = await fetchCsvDatasets();
+      
+      if (datasetsResponse.success && datasetsResponse.data) {
+        console.log("CSV datasets fetched:", datasetsResponse.data);
+        setCsvDatasets(datasetsResponse.data);
+      } else {
+        console.error("Failed to fetch CSV datasets:", datasetsResponse.error);
+        toast({
+          title: "Error fetching datasets",
+          description: datasetsResponse.error || "Could not load CSV datasets",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error loading data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load data. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-    
-    if (datasetsResponse.success && datasetsResponse.data) {
-      setCsvDatasets(datasetsResponse.data);
-    }
-    
-    setLoading(false);
   };
   
   const handleConnectionCreated = (connection: PostgresConnection) => {
@@ -47,6 +77,14 @@ const Datasets = () => {
   const handleCsvUploaded = (dataset: CsvDataset) => {
     setCsvDatasets(prev => [dataset, ...prev]);
     setActiveTab('list');
+  };
+  
+  const handleDatasetDeleted = (id: string, type: 'csv' | 'postgres') => {
+    if (type === 'csv') {
+      setCsvDatasets(prev => prev.filter(dataset => dataset.id !== id));
+    } else {
+      setPostgresConnections(prev => prev.filter(connection => connection.id !== id));
+    }
   };
   
   return (
@@ -102,6 +140,7 @@ const Datasets = () => {
             <DatasetList
               postgresConnections={postgresConnections}
               csvDatasets={csvDatasets}
+              onDelete={handleDatasetDeleted}
             />
           </TabsContent>
           

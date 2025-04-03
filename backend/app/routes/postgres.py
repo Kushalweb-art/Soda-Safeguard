@@ -66,6 +66,24 @@ async def create_connection(connection: PostgresConnectionCreate, db: Session = 
         "data": new_connection.to_dict()
     }
 
+@router.delete("/connections/{connection_id}", response_model=ApiResponse)
+async def delete_connection(connection_id: str, db: Session = Depends(get_db)):
+    """Delete a PostgreSQL connection by ID"""
+    connection = db.query(PostgresConnection).filter(PostgresConnection.id == connection_id).first()
+    if not connection:
+        return {
+            "success": False,
+            "error": "Connection not found"
+        }
+    
+    db.delete(connection)
+    db.commit()
+    
+    return {
+        "success": True,
+        "data": {"message": f"Connection {connection_id} deleted successfully"}
+    }
+
 @router.get("/connections/{connection_id}", response_model=ApiResponse)
 async def get_connection_by_id(connection_id: str, db: Session = Depends(get_db)):
     """Get a PostgreSQL connection by ID"""

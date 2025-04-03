@@ -6,6 +6,10 @@ export const fetchPostgresConnections = async (): Promise<ApiResponse<PostgresCo
   return fetchApi<PostgresConnection[]>('/postgres/connections');
 };
 
+export const deletePostgresConnection = async (connectionId: string): Promise<ApiResponse<any>> => {
+  return fetchApi<any>(`/postgres/connections/${connectionId}`, { method: 'DELETE' });
+};
+
 export const createPostgresConnection = async (connection: Omit<PostgresConnection, 'id' | 'createdAt'>): Promise<ApiResponse<PostgresConnection>> => {
   try {
     await simulateLatency();

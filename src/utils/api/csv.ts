@@ -6,6 +6,10 @@ export const fetchCsvDatasets = async (): Promise<ApiResponse<CsvDataset[]>> => 
   return fetchApi<CsvDataset[]>('/datasets/csv');
 };
 
+export const deleteCsvDataset = async (datasetId: string): Promise<ApiResponse<any>> => {
+  return fetchApi<any>(`/datasets/csv/${datasetId}`, { method: 'DELETE' });
+};
+
 export const uploadCsvFile = async (file: File): Promise<ApiResponse<CsvDataset>> => {
   try {
     await simulateLatency();

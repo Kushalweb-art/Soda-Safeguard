@@ -1,14 +1,14 @@
 
 import { ApiResponse } from '@/types';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 // API base URL - ensure this matches your backend server
-export const API_BASE_URL = 'http://127.0.0.1:8000/api';
+export const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:8000/api' : '/api';
 
 // Helper function to simulate API latency in development for smoother UX
 export const simulateLatency = async () => {
-  if (process.env.NODE_ENV === 'development') {
-    const latency = 500 + Math.random() * 500;
+  if (import.meta.env.DEV) {
+    const latency = 100 + Math.random() * 200;
     return new Promise(resolve => setTimeout(resolve, latency));
   }
 };
@@ -42,9 +42,11 @@ export const fetchApi = async <T>(
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         ...options.headers,
       },
       ...options,
+      credentials: 'include',
     });
     
     if (!response.ok) {
