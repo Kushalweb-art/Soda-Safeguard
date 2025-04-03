@@ -37,6 +37,8 @@ if not allowed_origins or allowed_origins[0] == "":
         "http://127.0.0.1:5174",
         "http://localhost:8080",  # Added for current Vite server
         "http://127.0.0.1:8080",   # Added for current Vite server
+        "https://*.github.dev",    # GitHub Codespaces URLs
+        "https://*.app.github.dev", # GitHub Codespaces URLs
         "*"  # Allow all origins during development
     ]
 
@@ -62,10 +64,18 @@ async def root():
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     print(f"Received request: {request.method} {request.url}")
+    print(f"Origin: {request.headers.get('origin')}")
     print(f"Headers: {request.headers}")
     
     response = await call_next(request)
     print(f"Response status: {response.status_code}")
+    
+    # Add CORS headers directly for additional safety
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    
     return response
 
 if __name__ == "__main__":

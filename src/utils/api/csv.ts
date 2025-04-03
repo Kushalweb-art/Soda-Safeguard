@@ -26,6 +26,7 @@ export const uploadCsvFile = async (file: File): Promise<ApiResponse<CsvDataset>
       method: 'POST',
       body: formData,
       credentials: 'include',
+      mode: 'cors',
     });
     
     if (!response.ok) {

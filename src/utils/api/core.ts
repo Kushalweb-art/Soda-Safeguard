@@ -2,10 +2,14 @@
 import { ApiResponse } from '@/types';
 import { toast } from '@/components/ui/use-toast';
 
-// API base URL - ensure this matches your backend server
+// API base URL - dynamically determine based on environment
 export const API_BASE_URL = import.meta.env.DEV 
-  ? 'http://localhost:8000/api' 
+  ? (window.location.hostname.includes('github.dev') 
+      ? `${window.location.protocol}//${window.location.hostname.replace('-8080', '-8000')}/api`
+      : 'http://localhost:8000/api')
   : window.location.origin + '/api';
+
+console.log('Using API base URL:', API_BASE_URL);
 
 // Helper function to simulate API latency in development for smoother UX
 export const simulateLatency = async () => {
@@ -49,6 +53,7 @@ export const fetchApi = async <T>(
       },
       ...options,
       credentials: 'include',
+      mode: 'cors',
     });
     
     if (!response.ok) {
