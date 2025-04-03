@@ -2,9 +2,13 @@
 import { ApiResponse } from '@/types';
 import { toast } from '@/components/ui/use-toast';
 
+// Extract GitHub Codespaces hostname pattern for better URL mapping
+const isGitHubCodespaces = window.location.hostname.includes('.github.dev') || 
+                          window.location.hostname.includes('.app.github.dev');
+
 // API base URL - dynamically determine based on environment
 export const API_BASE_URL = import.meta.env.DEV 
-  ? (window.location.hostname.includes('github.dev') 
+  ? (isGitHubCodespaces
       ? `${window.location.protocol}//${window.location.hostname.replace('-8080', '-8000')}/api`
       : 'http://localhost:8000/api')
   : window.location.origin + '/api';
@@ -52,7 +56,7 @@ export const fetchApi = async <T>(
         ...options.headers,
       },
       ...options,
-      credentials: 'include',
+      credentials: isGitHubCodespaces ? 'omit' : 'include', // Omit credentials for cross-origin requests in Codespaces
       mode: 'cors',
     });
     

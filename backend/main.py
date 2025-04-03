@@ -29,6 +29,7 @@ app = FastAPI(
 # Configure CORS with settings from environment
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
 if not allowed_origins or allowed_origins[0] == "":
+    # Updated allowed origins with more flexible GitHub Codespaces patterns
     allowed_origins = [
         "http://localhost:3000",
         "http://localhost:5173",  # Vite dev server
@@ -37,19 +38,21 @@ if not allowed_origins or allowed_origins[0] == "":
         "http://127.0.0.1:5174",
         "http://localhost:8080",  # Added for current Vite server
         "http://127.0.0.1:8080",   # Added for current Vite server
-        "https://*.github.dev",    # GitHub Codespaces URLs
-        "https://*.app.github.dev", # GitHub Codespaces URLs
+        "https://*.github.dev",    # GitHub Codespaces URLs pattern (won't work as wildcard)
+        "https://*.app.github.dev", # GitHub Codespaces URLs pattern (won't work as wildcard)
         "*"  # Allow all origins during development
     ]
 
 print(f"Configuring CORS with allowed origins: {allowed_origins}")
 
+# Replace CORS middleware with a more permissive one for development
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins during development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Include routers
@@ -63,18 +66,19 @@ async def root():
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
+    origin = request.headers.get('origin', 'No origin')
     print(f"Received request: {request.method} {request.url}")
-    print(f"Origin: {request.headers.get('origin')}")
-    print(f"Headers: {request.headers}")
+    print(f"Origin: {origin}")
     
+    # Get response from the endpoint
     response = await call_next(request)
     print(f"Response status: {response.status_code}")
     
-    # Add CORS headers directly for additional safety
-    response.headers["Access-Control-Allow-Origin"] = "*"
+    # For GitHub Codespaces, manually set CORS headers for every response
+    response.headers["Access-Control-Allow-Origin"] = origin if origin != 'No origin' else "*"
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
     
     return response
 
